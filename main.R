@@ -101,8 +101,8 @@ To_Graph  %>%
   theme_classic()
 
 
-# Latency Graph -----------------------------------------------------------
-# Wave 1 Latency with color for each Frequency
+# Amplitude Graph -----------------------------------------------------------
+# Wave 1 Amplitude with color for each Frequency
 
 To_Graph  %>%
   ggplot(aes(x = dB, y = `W1 Amp`, color = Freq, linetype = Genotype, shape = Genotype, group = interaction(Freq, Genotype))) +
