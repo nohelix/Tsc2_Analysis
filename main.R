@@ -66,15 +66,29 @@ To_Graph %>%
                  geom = "errorbar", width = 1, position = position_dodge(1)) +
     stat_summary(fun = mean, geom = "point", position = position_dodge(1), size = 3) +
     stat_summary(fun = mean, geom = "line") +
-    facet_wrap(~ Freq, scale = "free", nrow = 3, strip.position = "top") +
+    facet_wrap(~ Freq, scales = "free", nrow = 3, strip.position = "top") +
     theme_classic()
 
 
 # RMS Graph ---------------------------------------------------------------
-# Graphs everything for an initial check
+# RMS with color for each Frequency
 
-Pilot_ABR_data %>%
+To_Graph  %>%
   ggplot(aes(x = dB, y = RMS, color = Freq, linetype = Genotype, shape = Genotype, group = interaction(Freq, Genotype))) +
+  stat_summary(fun = mean,
+               fun.min = function(x) mean(x) - se(x),
+               fun.max = function(x) mean(x) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(1)) +
+  stat_summary(fun = mean, geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = mean, geom = "line") +
+  theme_classic()
+
+
+# Latency Graph -----------------------------------------------------------
+# Wave 1 Latency with color for each Frequency
+
+To_Graph  %>%
+  ggplot(aes(x = dB, y = `W1 Amp`, color = Freq, linetype = Genotype, shape = Genotype, group = interaction(Freq, Genotype))) +
   stat_summary(fun = mean,
                fun.min = function(x) mean(x) - se(x),
                fun.max = function(x) mean(x) + se(x),
