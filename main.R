@@ -43,15 +43,32 @@ Pilot_ABR_data_summarized <-
   summarize(RMS = mean(RMS), `W1 Lat` = mean(`W1 Lat`), `W1 Amp` = mean(`W1 Amp`))
 
 
-# Select Graphing Data ----------------------------------------------------
-# Can be summarized or not
-    
-To_Graph = Pilot_ABR_data
+
+# RMS ANOVA ---------------------------------------------------------------
+
+RMS.aov <- aov(RMS ~ Genotype * Freq, data = Pilot_ABR_data_summarized)
+summary(RMS.aov)
+
+
+# W1 Amp ANOVA ------------------------------------------------------------
+
+W1amp.aov <- aov(`W1 Amp` ~ Genotype * Freq, data = Pilot_ABR_data_summarized)
+summary(W1amp.aov)
+
+# W1 Latency ANOVA --------------------------------------------------------
+
+W1lat.aov <- aov(`W1 Lat` ~ Genotype * Freq, data = Pilot_ABR_data_summarized)
+summary(W1lat.aov)
 
 # Graph -------------------------------------------------------------------
 
 # Calculate standard error (SE) like standard deviation (SD)
 se <- function(x, ...) {sqrt(var(x, ...)/length(x))}
+
+# Select Graphing Data ----------------------------------------------------
+# Can be summarized or not
+    
+To_Graph = Pilot_ABR_data_summarized
 
 
 # Overview Graph ----------------------------------------------------------
