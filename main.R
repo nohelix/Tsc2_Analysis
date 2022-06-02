@@ -83,8 +83,12 @@ To_Graph %>%
                  geom = "errorbar", width = 1, position = position_dodge(1)) +
     stat_summary(fun = mean, geom = "point", position = position_dodge(1), size = 3) +
     stat_summary(fun = mean, geom = "line") +
+    scale_x_continuous(breaks = c(10,30,50,70,90)) +
     facet_wrap(~ Freq, scales = "free", nrow = 3, strip.position = "top") +
-    theme_classic()
+    theme_classic() +
+    theme(
+      panel.grid.major.x = element_line(colour = "grey80")
+    )
 
 
 # RMS Graph ---------------------------------------------------------------
@@ -98,7 +102,11 @@ To_Graph  %>%
                geom = "errorbar", width = 1, position = position_dodge(1)) +
   stat_summary(fun = mean, geom = "point", position = position_dodge(1), size = 3) +
   stat_summary(fun = mean, geom = "line") +
-  theme_classic()
+  scale_x_continuous(breaks = c(10,30,50,70,90)) +
+  theme_classic() +
+  theme(
+    panel.grid.major.x = element_line(colour = "grey80")
+  )
 
 
 # Amplitude Graph -----------------------------------------------------------
@@ -112,5 +120,9 @@ To_Graph  %>%
                geom = "errorbar", width = 1, position = position_dodge(1)) +
   stat_summary(fun = mean, geom = "point", position = position_dodge(1), size = 3) +
   stat_summary(fun = mean, geom = "line") +
-  theme_classic()
+  scale_x_continuous(breaks = c(10,30,50,70,90)) +
+  theme_classic() +
+  theme(
+    panel.grid.major.x = element_line(colour = "grey80")
+  )
 
