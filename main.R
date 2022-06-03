@@ -69,7 +69,8 @@ se <- function(x, ...) {sqrt(var(x, ...)/length(x))}
 # Select Graphing Data ----------------------------------------------------
 # Can be summarized or not
     
-To_Graph = Pilot_ABR_data_summarized
+To_Graph = Pilot_ABR_data_summarized %>%
+              filter(Type == "BBN")
 
 
 # Overview Graph ----------------------------------------------------------
@@ -115,6 +116,23 @@ To_Graph  %>%
 
 To_Graph  %>%
   ggplot(aes(x = dB, y = `W1 Amp`, color = Freq, linetype = Genotype, shape = Genotype, group = interaction(Freq, Genotype))) +
+  stat_summary(fun = mean,
+               fun.min = function(x) mean(x) - se(x),
+               fun.max = function(x) mean(x) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(1)) +
+  stat_summary(fun = mean, geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = mean, geom = "line") +
+  scale_x_continuous(breaks = c(10,30,50,70,90)) +
+  theme_classic() +
+  theme(
+    panel.grid.major.x = element_line(colour = "grey80")
+  )
+
+# RMS Grant Graph ---------------------------------------------------------------
+# RMS with color for each Frequency
+
+To_Graph  %>%
+  ggplot(aes(x = dB, y = RMS, color = Freq, linetype = Genotype, shape = Genotype, group = interaction(Freq, Genotype))) +
   stat_summary(fun = mean,
                fun.min = function(x) mean(x) - se(x),
                fun.max = function(x) mean(x) + se(x),
