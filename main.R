@@ -30,11 +30,12 @@ Pilot_ABR_data <- read_excel("C:/Users/Noelle/Box/Auerbach Lab (Personal)/Tsc AB
 
 # Data Prep ---------------------------------------------------------------
 
-# Relabel the Freqency to discrete values
+# Relabel the Frequency to discrete values
 Pilot_ABR_data <-
   Pilot_ABR_data %>%
   mutate(Freq = ifelse(Freq == "0", "BBN", paste(Freq, "kHz")),
-         Freq = factor(Freq, levels = c("4 kHz", "8 kHz", "16 kHz", "32 kHz", "BBN")))
+         Freq = factor(Freq, levels = c("4 kHz", "8 kHz", "16 kHz", "32 kHz", "BBN")),
+         Type = ifelse(Freq == "BBN", "BBN", "Tone"))
 
 
 Pilot_ABR_data_summarized <-
