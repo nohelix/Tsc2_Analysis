@@ -69,9 +69,7 @@ se <- function(x, ...) {sqrt(var(x, ...)/length(x))}
 # Select Graphing Data ----------------------------------------------------
 # Can be summarized or not
     
-To_Graph = Pilot_ABR_data_summarized #%>%
-              # filter(Type == "Tone")
-
+To_Graph = Pilot_ABR_data_summarized
 
 # Overview Graph ----------------------------------------------------------
 # Graphs everything for an initial check
