@@ -40,7 +40,7 @@ Pilot_ABR_data <-
 
 Pilot_ABR_data_summarized <-
   Pilot_ABR_data %>%
-  group_by(Rat, Condition, Ear, Freq, dB, Genotype) %>%
+  group_by(Rat, Condition, Ear, Freq, dB, Genotype, Type) %>%
   summarize(RMS = mean(RMS), `W1 Lat` = mean(`W1 Lat`), `W1 Amp` = mean(`W1 Amp`))
 
 
