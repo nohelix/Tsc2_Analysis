@@ -69,8 +69,8 @@ se <- function(x, ...) {sqrt(var(x, ...)/length(x))}
 # Select Graphing Data ----------------------------------------------------
 # Can be summarized or not
     
-To_Graph = Pilot_ABR_data_summarized %>%
-              filter(Type == "BBN")
+To_Graph = Pilot_ABR_data_summarized #%>%
+              # filter(Type == "Tone")
 
 
 # Overview Graph ----------------------------------------------------------
@@ -89,7 +89,7 @@ To_Graph %>%
     facet_wrap(~ Freq, scales = "free", nrow = 3, strip.position = "top") +
     theme_classic() +
     theme(
-      panel.grid.major.x = element_line(colour = "grey80")
+      panel.grid.major.x = element_line(color = "grey80")
     )
 
 
@@ -107,7 +107,7 @@ To_Graph  %>%
   scale_x_continuous(breaks = c(10,30,50,70,90)) +
   theme_classic() +
   theme(
-    panel.grid.major.x = element_line(colour = "grey80")
+    panel.grid.major.x = element_line(color = "grey80")
   )
 
 
@@ -125,23 +125,7 @@ To_Graph  %>%
   scale_x_continuous(breaks = c(10,30,50,70,90)) +
   theme_classic() +
   theme(
-    panel.grid.major.x = element_line(colour = "grey80")
+    panel.grid.major.x = element_line(color = "grey80")
   )
 
-# RMS Grant Graph ---------------------------------------------------------------
-# RMS with color for each Frequency
-
-To_Graph  %>%
-  ggplot(aes(x = dB, y = RMS, color = Freq, linetype = Genotype, shape = Genotype, group = interaction(Freq, Genotype))) +
-  stat_summary(fun = mean,
-               fun.min = function(x) mean(x) - se(x),
-               fun.max = function(x) mean(x) + se(x),
-               geom = "errorbar", width = 1, position = position_dodge(1)) +
-  stat_summary(fun = mean, geom = "point", position = position_dodge(1), size = 3) +
-  stat_summary(fun = mean, geom = "line") +
-  scale_x_continuous(breaks = c(10,30,50,70,90)) +
-  theme_classic() +
-  theme(
-    panel.grid.major.x = element_line(colour = "grey80")
-  )
 
