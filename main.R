@@ -6,7 +6,7 @@
 library(readxl); library(tidyverse); library(magrittr); library(dplyr); library(tidyr);
 
 # Analysis
-library(psych)
+library(psych); library(gtools);
 
 # Data visualization
 library(ggplot2); library(forcats);
@@ -35,7 +35,9 @@ Pilot_ABR_data <-
   Pilot_ABR_data %>%
   mutate(Freq = ifelse(Freq == "0", "BBN", paste(Freq, "kHz")),
          Freq = factor(Freq, levels = c("4 kHz", "8 kHz", "16 kHz", "32 kHz", "BBN")),
-         Type = ifelse(Freq == "BBN", "BBN", "Tone"))
+         Type = ifelse(Freq == "BBN", "BBN", "Tone"),
+         Genotype = factor(Genotype),
+         dB = factor(dB))
 
 
 Pilot_ABR_data_summarized <-
@@ -47,18 +49,26 @@ Pilot_ABR_data_summarized <-
 
 # RMS ANOVA ---------------------------------------------------------------
 
-RMS.aov <- aov(RMS ~ Genotype * Freq, data = Pilot_ABR_data_summarized)
+RMS.aov <- aov(RMS ~ Genotype * Freq * dB, data = Pilot_ABR_data_summarized)
 summary(RMS.aov)
+# TukeyHSD(RMS.aov)
+TukeyHSD(RMS.aov)$`Genotype:Freq` %>% 
+  as_tibble(.name_repair = "unique", rownames = "Comparison") %>% 
+  filter(!grepl("WT:.*?-WT:|Het:.*?-Het:", Comparison)) %>%
+  mutate(WT = gsub("^.*?WT:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         Het = gsub("^.*?Het:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         p.sig = stars.pval(`p adj`)) %>% 
+  filter(WT == Het)
 
 
 # W1 Amp ANOVA ------------------------------------------------------------
 
-W1amp.aov <- aov(`W1 Amp` ~ Genotype * Freq, data = Pilot_ABR_data_summarized)
+W1amp.aov <- aov(`W1 Amp` ~ Genotype * Freq * dB, data = Pilot_ABR_data_summarized)
 summary(W1amp.aov)
 
 # W1 Latency ANOVA --------------------------------------------------------
 
-W1lat.aov <- aov(`W1 Lat` ~ Genotype * Freq, data = Pilot_ABR_data_summarized)
+W1lat.aov <- aov(`W1 Lat` ~ Genotype * Freq * dB, data = Pilot_ABR_data_summarized)
 summary(W1lat.aov)
 
 # Graph -------------------------------------------------------------------
@@ -80,7 +90,7 @@ To_Graph %>%
     stat_summary(fun = mean,
                  fun.min = function(x) mean(x) - se(x),
                  fun.max = function(x) mean(x) + se(x),
-                 geom = "errorbar", width = 1, position = position_dodge(1)) +
+                 geom = "errorbar", width = 5, position = position_dodge(1)) +
     stat_summary(fun = mean, geom = "point", position = position_dodge(1), size = 3) +
     stat_summary(fun = mean, geom = "line") +
     scale_x_continuous(breaks = c(10,30,50,70,90)) +
