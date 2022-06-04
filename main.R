@@ -54,11 +54,22 @@ summary(RMS.aov)
 # TukeyHSD(RMS.aov)
 TukeyHSD(RMS.aov)$`Genotype:Freq` %>% 
   as_tibble(.name_repair = "unique", rownames = "Comparison") %>% 
-  filter(!grepl("WT:.*?-WT:|Het:.*?-Het:", Comparison)) %>%
+  filter(grepl("WT:.*?-Het:.*?|Het:.*?-WT:.*?", Comparison)) %>%
   mutate(WT = gsub("^.*?WT:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
          Het = gsub("^.*?Het:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
          p.sig = stars.pval(`p adj`)) %>% 
   filter(WT == Het)
+
+TukeyHSD(RMS.aov)$`Genotype:Freq:dB` %>%
+  as_tibble(.name_repair = "unique", rownames = "Comparison") %>%
+  filter(grepl("WT:.*?-Het:.*?|Het:.*?-WT:.*?", Comparison)) %>%
+  mutate(WT = gsub("^.*?WT:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         Het = gsub("^.*?Het:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         dB1 = gsub("^.*?WT:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)?:(\\d+).*?$","\\2", Comparison),
+         dB2 = gsub("^.*?Het:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)?:(\\d+).*?$","\\2", Comparison),
+         p.sig = stars.pval(`p adj`)) %>%
+  filter(WT == Het & dB1 == dB2 & !is.na(`p adj`)) %>% 
+  filter(p.sig != " ")
 
 
 # W1 Amp ANOVA ------------------------------------------------------------
@@ -66,10 +77,49 @@ TukeyHSD(RMS.aov)$`Genotype:Freq` %>%
 W1amp.aov <- aov(`W1 Amp` ~ Genotype * Freq * dB, data = Pilot_ABR_data_summarized)
 summary(W1amp.aov)
 
+TukeyHSD(W1amp.aov)$`Genotype:Freq` %>% 
+  as_tibble(.name_repair = "unique", rownames = "Comparison") %>% 
+  filter(grepl("WT:.*?-Het:.*?|Het:.*?-WT:.*?", Comparison)) %>%
+  mutate(WT = gsub("^.*?WT:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         Het = gsub("^.*?Het:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         p.sig = stars.pval(`p adj`)) %>% 
+  filter(WT == Het)
+
+TukeyHSD(W1amp.aov)$`Genotype:Freq:dB` %>%
+  as_tibble(.name_repair = "unique", rownames = "Comparison") %>%
+  filter(grepl("WT:.*?-Het:.*?|Het:.*?-WT:.*?", Comparison)) %>%
+  mutate(WT = gsub("^.*?WT:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         Het = gsub("^.*?Het:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         dB1 = gsub("^.*?WT:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)?:(\\d+).*?$","\\2", Comparison),
+         dB2 = gsub("^.*?Het:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)?:(\\d+).*?$","\\2", Comparison),
+         p.sig = stars.pval(`p adj`)) %>%
+  filter(WT == Het & dB1 == dB2 & !is.na(`p adj`)) %>% 
+  filter(p.sig != " ")
+
 # W1 Latency ANOVA --------------------------------------------------------
 
 W1lat.aov <- aov(`W1 Lat` ~ Genotype * Freq * dB, data = Pilot_ABR_data_summarized)
 summary(W1lat.aov)
+
+TukeyHSD(W1lat.aov)$`Genotype:Freq` %>% 
+  as_tibble(.name_repair = "unique", rownames = "Comparison") %>% 
+  filter(grepl("WT:.*?-Het:.*?|Het:.*?-WT:.*?", Comparison)) %>%
+  mutate(WT = gsub("^.*?WT:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         Het = gsub("^.*?Het:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         p.sig = stars.pval(`p adj`)) %>% 
+  filter(WT == Het)
+
+TukeyHSD(W1lat.aov)$`Genotype:Freq:dB` %>%
+  as_tibble(.name_repair = "unique", rownames = "Comparison") %>%
+  filter(grepl("WT:.*?-Het:.*?|Het:.*?-WT:.*?", Comparison)) %>%
+  mutate(WT = gsub("^.*?WT:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         Het = gsub("^.*?Het:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)-?.*$","\\1", Comparison),
+         dB1 = gsub("^.*?WT:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)?:(\\d+).*?$","\\2", Comparison),
+         dB2 = gsub("^.*?Het:(4 kHz|8 kHz|16 kHz|32 kHz|BBN)?:(\\d+).*?$","\\2", Comparison),
+         p.sig = stars.pval(`p adj`)) %>%
+  filter(WT == Het & dB1 == dB2 & !is.na(`p adj`)) %>% 
+  filter(p.sig != " ")
+
 
 # Graph -------------------------------------------------------------------
 
@@ -79,7 +129,8 @@ se <- function(x, ...) {sqrt(var(x, ...)/length(x))}
 # Select Graphing Data ----------------------------------------------------
 # Can be summarized or not
     
-To_Graph = Pilot_ABR_data_summarized
+To_Graph = Pilot_ABR_data_summarized %>%
+              mutate(dB = as.numeric(as.character(dB)))
 
 # Overview Graph ----------------------------------------------------------
 # Graphs everything for an initial check
@@ -90,7 +141,7 @@ To_Graph %>%
     stat_summary(fun = mean,
                  fun.min = function(x) mean(x) - se(x),
                  fun.max = function(x) mean(x) + se(x),
-                 geom = "errorbar", width = 5, position = position_dodge(1)) +
+                 geom = "errorbar", width = 1, position = position_dodge(1)) +
     stat_summary(fun = mean, geom = "point", position = position_dodge(1), size = 3) +
     stat_summary(fun = mean, geom = "line") +
     scale_x_continuous(breaks = c(10,30,50,70,90)) +
