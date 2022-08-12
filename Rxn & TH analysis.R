@@ -132,6 +132,12 @@ File_list_possible <-
       tibble(FileName = .)
   )
 
+# Missing Files
+left_join(File_list, File_list_possible) %>% 
+  filter(is.na(FileName)) %>% 
+  filter(Date != Sys.Date()) %>% 
+  View
+
 # Loaded File list for comparison
 File_list_temp = filter(File_list_possible, !(FileName %in% loaded_files))
 
@@ -157,24 +163,6 @@ for(i in 1:nrow(File_list_temp)) {       # for-loop over rows
 }
 
 rm(list = c("File_list_temp", "i"))
-
-
-# Daily summary from raw data -------------------------------------------------------------
-# Calculates hit rate, false alarm rate, and trial count from data across conditions
-# Summarized by day and individual
-
-writeLines("Analyzing summary data (trials/hits/FAs)")
-
-# Summarize Hits, misses, FAs, & CRs for each individual by day
-Hit_summary <-
-  Tsc_Data %>%
-  # Summarize for each individual by day
-  group_by(ID, Genotype, Duration, Phase) %>%
-  summarise(count = n_distinct(Date),
-            Trials = mean(Trials, na.rm = T),
-            Hit = mean(`Hit`, na.rm = T),
-            FA = mean(`FA`, na.rm = T),
-            .groups = "keep")
 
 
 # Reaction time calculation -----------------------------------------------
