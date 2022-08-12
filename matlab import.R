@@ -77,6 +77,7 @@ if (misses_calc != results_misses) stop("Misses count miss-match")
 if (CRs_calc != results_CR) stop("Correct Reject (CR) count miss-match")
 if (FAs_calc != results_FA) stop("False Alarm (FA) count miss-match")
 
+
 # Variable cleanup --------------------------------------------------------
 # Remove temp variables from the environment as they shouldn't be needed again
 

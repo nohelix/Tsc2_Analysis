@@ -6,6 +6,7 @@ source("~/GitHub/Behavior-autoanalysis/fixed import.R")
 library(tidyverse); library(dplyr); library(tidyr)
 
 # Analysis
+library(psycho)
 
 # Global Variables --------------------------------------------------------
 
@@ -115,7 +116,7 @@ rm(Tsc_Data_Raw)
 File_list <-
   Tsc_Data %>%
   # Select date and file columns
-  select(Date, File, ID, Phase) %>%
+  select(Date, File, ID, Phase, Genotype, Intensity, Duration) %>%
   # filter(Date > "2022-01-01") %>%
   # Change date to same format as folder names
   mutate(Folder = as.character.Date(Date) %>% gsub("-", "", .)) #%>% print
@@ -123,7 +124,7 @@ File_list <-
 # Get Possible files
 File_list_possible <-
   File_list %>%
-  group_by(ID, Date, File, Phase) %>%
+  group_by(Date, File, ID, Phase, Genotype, Intensity, Duration) %>%
   do(
     list.files(path = paste("./data/", .$Folder, sep = ""),
                pattern = paste(gsub(" ", "", .$ID), "_.*.mat", sep = ""),
@@ -147,27 +148,117 @@ for(i in 1:nrow(File_list_temp)) {       # for-loop over rows
   file = File_list_temp[[i, "FileName"]]
   ID = File_list_temp[[i, "ID"]]
   Date = File_list_temp[[i, "Date"]]
+  Phase = File_list_temp[[i, "Phase"]]
+  Genotype = File_list_temp[[i, "Genotype"]]
+  Intensity = File_list_temp[[i, "Intensity"]]
+  Duration = File_list_temp[[i, "Duration"]]
   print(paste("Laoding:", ID, "on", Date))
   current_file = readMat(file)
   source("~/GitHub/Tsc2_Analysis/matlab import.R")
   loaded_files = append(loaded_files, file)
   df = run_data %>%
-        mutate(ID = ID, Date = Date) %>%
+        mutate(ID = ID, Genotype = Genotype, Date = Date, Stim_Block = stim_block_size, Phase = Phase, Intensity = Intensity, Duration = Duration) %>%
         rbind(df)
-  Master_summary = tibble_row(ID = ID, Date = Date, Trials = total_trials, `Hit%` = hits_calc, `FA%` = FAs_calc, Stim_Block = stim_block_size) %>%
+  Master_summary = tibble_row(ID = ID, Date = Date, Intensity = Intensity, Duration = Duration, Trials = total_trials, `Hit%` = hits_calc, `FA%` = FAs_calc, Stim_Block_Size = stim_block_size) %>%
                    rbind(Master_summary)
   
   # cleanup extraneous copies of the current file
   rm(list = c("run_data", 'stim_master_list', 'CRs_calc', 'FAs_calc', 'hits_calc', 'misses_calc', 'stim_block_size', 'stim_type', 'total_trials'))
-  rm(list = c("Date", "ID", "file"))
+  rm(list = c("Date", "ID", "file", "Phase", "Genotype", "Intensity", "Duration"))
 }
 
 rm(list = c("File_list_temp", "i"))
+# 
+# df = File_list %>%
+#       select(-Folder) %>%
+#       right_join(df, by = c("Date", "ID"))
+# 
+# df = Master_summary %>%
+#       select(ID, Date, Stim_Block) %>%
+#       right_join(df, by = c("Date", "ID")) %>%
+#       relocate(Stim_Block, .after = File)
+
+# Threshold Calculation ---------------------------------------------------
+# Signal detection index calculation by the psycho package. We use d' a sensitivity measure.
+# https://neuropsychology.github.io/psycho.R/2018/03/29/SDT.html
+
+# Creates a properly formatted table for psycho by adding the overall CR/FA to each row
+dprime_table <- function(df) {
+  # print(df)
+  check = df %>% filter(Type == 0) %>% count() %>% as.numeric() #%>% print
+  CRnum = (if (check == 1) filter(df, Type == 0) %>% .$C.R. %>% as.numeric() else check) #%>% print
+  FAnum = (if (check == 1) filter(df, Type == 0) %>% .$F.A. %>% as.numeric() else check) #%>% print
+  new_df = df %>% filter(Type == 1) %>% rename(CR = C.R., FA = F.A.) %>%
+    mutate(CR = ifelse(is.na(CR), CRnum, CR),
+           FA = ifelse(is.na(FA), FAnum, CR),
+           Hit = as.numeric(Hit),
+           Miss = as.numeric(Miss)) %>% replace(is.na(.), 0) #%>% print
+  return(new_df)
+}
+
+# Signal detection index calculation
+dprime_calc <- function(df) {
+  # print(df)
+  dprime(n_hit = df$Hit,
+         n_fa = df$FA,
+         n_miss = df$Miss,
+         n_cr = df$CR,
+         adjusted = TRUE) %>%
+    as_tibble() %>%
+    mutate(dB = df$`Inten (dB)`,
+           Type =  case_when(df$`Freq (kHz)` == 0 ~ "BBN",
+                             TRUE ~ paste0(df$`Freq (kHz)`, "kHz"))# %>% print
+    ) #%>% print
+}
+
+writeLines("Calculating Thresholds")
+
+# Calculate d' and save (along with hit/miss/CR/FA table)
+TH_data <-
+  df %>%
+  group_by(ID, Genotype, Stim_Block, `Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>% #View
+  summarise(count = n(), .groups = "keep") %>%
+  spread(Response, count) %>% #View
+  group_by(ID, Sex, Condition, Stim, BG_Type, BG_Intensity, `Dur (ms)`) %>% #print
+  nest() %>%
+  mutate(dprime_data = map(data, dprime_table),
+         dprime = map(dprime_data, dprime_calc)) %>% #print
+  unnest(dprime) #%>% print
+
+
+
+# Threshold calculation calculation based on TH_cutoff intercept of fit curve
+# LOESS: Local Regression is a non-parametric approach that fits multiple regressions
+# see http://r-statistics.co/Loess-Regression-With-R.html
+TH_calc <- function(df) {
+  # Uncomment to see line fitting by a package which shows line
+  # library(drda)
+  # drda(dprime ~ dB, data = df) %>% plot
+  fit = loess(dprime ~ dB, data = df)
+  # plot(fit)
+  TH = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff)$y #%>% print
+  return(TH)
+}
+
+
+TH <-
+  TH_data %>%
+  select(ID:`Dur (ms)`, dprime, dB, Type) %>% #print
+  mutate(Type = fct_relevel(Type, levels = c("BBN", "4kHz", "8kHz", "16kHz", "32kHz"))) %>% #print
+  group_by(ID, Sex, Condition, BG_Type, BG_Intensity, `Dur (ms)`, Type) %>%
+  nest() %>%
+  mutate(TH = map_dbl(data, TH_calc)) %>%
+  select(-data) %>%
+  spread(Type, TH)
+
 
 
 # Reaction time calculation -----------------------------------------------
 
 writeLines("Calculating average RXN time")
+
+# Rxn <-
+  
 
 Rxn <-
   Tsc_Data %>%
