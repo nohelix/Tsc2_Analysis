@@ -3,7 +3,7 @@
 # data loading/manipulation
 library(R.matlab);
 source("~/GitHub/Behavior-autoanalysis/fixed import.R")
-library(rio); library(tidyverse); library(dplyr); library(tidyr)
+library(tidyverse); library(dplyr); library(tidyr)
 
 # Analysis
 
@@ -95,35 +95,69 @@ Tsc_Data <-
 rm(Tsc_Data_Raw)
 
 
-# # Get & verify raw files list ---------------------------------------------
-# # create a list of all relevant files (daily runs) that need to be imported
-# # and checks filenames on filesystem vs summary xls log's expected filenames
-# # popup for outright missing files (empty popup = no problems)
-# # warnings of mismatches export to xls
-# 
-# # This needs to walk a directory, find the .csv file that starts with the same
-# # name START as the 'file' column.
-# 
-# # Get folder and file names
-# File_list <-
-#   Tsc_Data %>%
-#   # Select date and file columns
-#   select(Date, File, ID) %>%
-#   # filter(Date > "2022-01-01") %>%
-#   # Change date to same format as folder names
-#   mutate(Folder = as.character.Date(Date) %>% gsub("-", "", .)) #%>% print
-# 
-# # Get EXPECTED file list
-# File_list <-
-#   File_list %>%
-#   group_by(ID, Date, File) %>%
-#   # filter(Folder == "20220106") %>%
-#   do(
-#     list.files(path = paste("./data/", .$Folder, sep = ""),
-#                pattern = "\\.mat", # The IDs have a space between color and # but the files don't. This removes the space.
-#                full.names = TRUE) %>%
-#       tibble(FileName = .)
-#   ) %>%
+# # File Loading Initialization ---------------------------------------------
+# # Only run once.
+# # File_list_temp = head(File_list_possible, 2)
+# df = tibble()
+# Master_summary = tibble()
+# loaded_files = list()
+
+# Get & verify raw files list ---------------------------------------------
+# create a list of all relevant files (daily runs) that need to be imported
+# and checks filenames on filesystem vs summary xls log's expected filenames
+# popup for outright missing files (empty popup = no problems)
+# warnings of mismatches export to xls
+
+# This needs to walk a directory, find the .csv file that starts with the same
+# name START as the 'file' column.
+
+# Get folder and file names
+File_list <-
+  Tsc_Data %>%
+  # Select date and file columns
+  select(Date, File, ID, Phase) %>%
+  # filter(Date > "2022-01-01") %>%
+  # Change date to same format as folder names
+  mutate(Folder = as.character.Date(Date) %>% gsub("-", "", .)) #%>% print
+
+# Get Possible files
+File_list_possible <-
+  File_list %>%
+  group_by(ID, Date, File, Phase) %>%
+  do(
+    list.files(path = paste("./data/", .$Folder, sep = ""),
+               pattern = paste(gsub(" ", "", .$ID), "_.*.mat", sep = ""),
+               # pattern = "\\.mat", # The IDs have a space between color and # but the files don't. This removes the space.
+               full.names = TRUE) %>%
+      tibble(FileName = .)
+  )
+
+# Loaded File list for comparison
+File_list_temp = filter(File_list_possible, !(FileName %in% loaded_files))
+
+
+# Load New Files ----------------------------------------------------------
+for(i in 1:nrow(File_list_temp)) {       # for-loop over rows
+  file = File_list_temp[[i, "FileName"]]
+  ID = File_list_temp[[i, "ID"]]
+  Date = File_list_temp[[i, "Date"]]
+  print(paste("Laoding:", ID, "on", Date))
+  current_file = readMat(file)
+  source("~/GitHub/Tsc2_Analysis/matlab import.R")
+  loaded_files = append(loaded_files, file)
+  df = run_data %>%
+        mutate(ID = ID, Date = Date) %>%
+        rbind(df)
+  Master_summary = tibble_row(ID = ID, Date = Date, Trials = total_trials, `Hit%` = hits_calc, `FA%` = FAs_calc, Stim_Block = stim_block_size) %>%
+                   rbind(Master_summary)
+  
+  # cleanup extraneous copies of the current file
+  rm(list = c("run_data", 'stim_master_list', 'CRs_calc', 'FAs_calc', 'hits_calc', 'misses_calc', 'stim_block_size', 'stim_type', 'total_trials'))
+  rm(list = c("Date", "ID", "file"))
+}
+
+rm(list = c("File_list_temp", "i"))
+
 
 # Daily summary from raw data -------------------------------------------------------------
 # Calculates hit rate, false alarm rate, and trial count from data across conditions
