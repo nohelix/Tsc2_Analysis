@@ -6,7 +6,7 @@ source("~/GitHub/Behavior-autoanalysis/fixed import.R")
 library(tidyverse); library(dplyr); library(tidyr)
 
 # Analysis
-library(psycho)
+library(psycho); library(stringr); library(FSA)
 
 # Global Variables --------------------------------------------------------
 
@@ -146,6 +146,8 @@ writeLines(paste("Loading", nrow(File_list_temp), "files"))
 
 
 # Load New Files ----------------------------------------------------------
+# Note that I have mistaken stim_block for step_size
+
 for(i in 1:nrow(File_list_temp)) {       # for-loop over rows
   file = File_list_temp[[i, "FileName"]]
   ID = File_list_temp[[i, "ID"]]
@@ -211,18 +213,19 @@ writeLines("Calculating Thresholds")
 # Calculate d' and save (along with hit/miss/CR/FA table)
 TH_data <-
   df %>%
-  group_by(ID, Genotype, Duration, Stim_Block, `Dur (ms)`, Type, `Inten (dB)`, Response) %>% 
+  group_by(ID, Genotype, Duration, `Dur (ms)`, Type, `Inten (dB)`, Response) %>% 
   summarise(count = n(), .groups = "keep") %>% 
   spread(Response, count) %>% #View
-  group_by(ID, Genotype, Duration, Stim_Block) %>% #print
+  group_by(ID, Genotype, Duration) %>% #print
   nest() %>%
   mutate(dprime_data = map(data, dprime_table)) %>% 
   select(-data) %>% 
   unnest(cols = c(dprime_data)) %>%
-  group_by(ID, Genotype, Duration, Stim_Block, `Dur (ms)`) %>% #print
+  group_by(ID, Genotype, Duration, `Dur (ms)`) %>% #print
   nest() %>%
   mutate(dprime = map(data, dprime_calc)) %>% #print
   unnest(dprime) #%>% print
+
 
 # Threshold calculation calculation based on TH_cutoff intercept of fit curve
 # LOESS: Local Regression is a non-parametric approach that fits multiple regressions
@@ -231,6 +234,7 @@ TH_calc <- function(df) {
   # Uncomment to see line fitting by a package which shows line
   # library(drda)
   # drda(dprime ~ dB, data = df) %>% plot
+  # print(df)
   fit = loess(dprime ~ dB, data = df)
   # plot(fit)
   TH = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff)$y #%>% print
@@ -240,23 +244,24 @@ TH_calc <- function(df) {
 
 TH <-
   TH_data %>%
-  select(ID:`Dur (ms)`, dprime, dB, Type) %>% #print
-  mutate(Type = fct_relevel(Type, levels = c("BBN", "4kHz", "8kHz", "16kHz", "32kHz"))) %>% #print
-  group_by(ID, Sex, Condition, BG_Type, BG_Intensity, `Dur (ms)`, Type) %>%
+  # filter(Duration == "50-300ms") %>%
+  # filter(ID == "RP 6") %>%
+  select(ID:`Dur (ms)`, dprime, dB) %>% #print
+  group_by(ID, Genotype, Duration, `Dur (ms)`)  %>%
   nest() %>%
-  mutate(TH = map_dbl(data, TH_calc)) %>%
-  select(-data) %>%
-  spread(Type, TH)
+  mutate(TH = map_dbl(data, TH_calc)) %>% #print
+  select(-data) %>% #print
+  mutate(Duration = case_when(Duration == "50ms" ~ "Single",
+                              Duration == "100ms" ~ "Single",
+                              Duration == "300ms" ~ "Single",
+                              Duration == "50-300ms" ~ "50-300 (Mixed)",
+                              TRUE ~ as.character(Duration)),
+         TH = round(TH, digits = 1)) %>%
+  spread(`Dur (ms)`, TH)
 
 
 
-# Reaction time calculation -----------------------------------------------
-
-writeLines("Calculating average RXN time")
-
-# Rxn <-
-  
-
+# Reaction time from summary sheet ----------------------------------------
 Rxn <-
   Tsc_Data %>%
   filter(Duration != "50-300ms") %>%
@@ -266,18 +271,102 @@ Rxn <-
             Rxn = mean(`Rxn`, na.rm = T),
             .groups = "keep")
 
-  # ANOVA
-  Rxn.aov = aov(Rxn ~ Intensity * Duration * Genotype, data = Rxn)
+# Reaction time calculation -----------------------------------------------
+
+writeLines("Calculating average RXN time")
+
+TH_filter <- function(df) {
+  # print(df)
+  ID = unique(df$ID) # %>% print
+  Dur = unique(df$`Dur (ms)`) # %>% print
+  kHz = unique(df$`Freq (kHz)`)
+  kHz = if_else(kHz == "0", "BBN", paste0(kHz,"kHz")) # %>% print
   
-  # Parametric check
-  Rxn.aov$residuals %>%
-    shapiro.test()
+  # print(TH)
+  # print(paste(ID))
   
-  # # Summary
-  # summary(Rxn.aov)
+  cuttoff = TH %>% # have to use UQ to force the evaluation of the variable
+    filter(Duration == "Single") %>% 
+    filter(ID == UQ(ID) & `Dur (ms)` == UQ(Dur)) %>% .$TH # %>% print
   
-  # Non-Parametric ANOVA
-  kruskal.test(Rxn ~ interaction(Duration,Genotype, Intensity), data = Rxn)
+  cuttoff = ifelse(identical(cuttoff, numeric(0)), -99, cuttoff) #%>% print
+  # ifelse(identical(cuttoff, numeric(0)), df, filter(df, `Inten (dB)` >= UQ(cuttoff))) %>% print
+  
+  df %>%
+    filter(`Inten (dB)` >= UQ(cuttoff)) # %>% print
+}
+
+Data_over_TH <-
+  df %>%
+  filter(Type == 1 & Response == "Hit") %>%
+  filter(`Inten (dB)` != -100) %>%
+  mutate(Rat = .$ID, Dur = .$`Dur (ms)`) %>%
+  group_by(Rat, Genotype, Dur, Duration) %>%
+  nest %>%
+  mutate(data = map(data, TH_filter)) #%>% print
+
+
+Rxn_overall <-
+  Data_over_TH %>%
+  ungroup() %>% 
+  unnest(data) %>% 
+  filter(Type == 1 & Response == "Hit") %>%
+  filter(`Inten (dB)` != -100) %>% 
+  # Filter by TH table so that only reaction times above thresholds are included
+  group_by(ID, Genotype, `Dur (ms)`, `Inten (dB)`) %>%
+  summarise(count = n_distinct(Date),
+            Rxn = mean(`Reaction_(s)`, na.rm = TRUE) * 1000, 
+            .groups = "drop") %>%
+  rename(Intensity = `Inten (dB)`)
+
+
+Rxn_overall_by_Duration <-
+  Data_over_TH %>%
+  ungroup() %>% 
+  unnest(data) %>% 
+  filter(Type == 1 & Response == "Hit") %>%
+  filter(`Inten (dB)` != -100) %>% 
+  # Filter by TH table so that only reaction times above thresholds are included
+  group_by(ID, Genotype, Duration, `Dur (ms)`, `Inten (dB)`) %>%
+  summarise(count = n_distinct(Date),
+            Rxn = mean(`Reaction_(s)`, na.rm = TRUE) * 1000, 
+            .groups = "drop") %>%
+  rename(Intensity = `Inten (dB)`) %>%
+  mutate(Duration = case_when(Duration == "50ms" ~ "",
+                              Duration == "100ms" ~ "",
+                              Duration == "300ms" ~ "",
+                              Duration == "50-300ms" ~ "Mix"))
+
+
+# Rxn testing -------------------------------------------------------------
+
+# ANOVA
+# Rxn.aov = aov(Rxn ~ Intensity * Duration * Genotype * `Dur (ms)`, data = Rxn_overall_by_Duration)
+Rxn.aov = aov(Rxn ~ Intensity * Genotype * `Dur (ms)`, data = Rxn_overall)
+Rxn.aov = aov(Rxn ~ Genotype, data = Rxn_overall)
+  
+# Parametric check
+Rxn.aov$residuals %>%
+  shapiro.test()
+
+# # Summary
+# summary(Rxn.aov)
+
+# Non-Parametric ANOVA - Genotype
+# friedman.test(Rxn ~ Genotype | Duration, data = Rxn_overall)
+kruskal.test(Rxn ~ interaction(`Dur (ms)`, Genotype, Intensity), data = Rxn_overall)
+kruskal.test(Rxn ~ Genotype, data = Rxn_overall)
+
+# Non-Parametric ANOVA - DURATION
+kruskal.test(Rxn ~ interaction(Intensity, Duration, `Dur (ms)`), data = Rxn_overall_by_Duration)
+
+
+postHoc <- 
+  dunnTest(Rxn ~ interaction(Duration, `Dur (ms)`),
+           data = Rxn_overall_by_Duration,
+           method = "bh")
+
+print(postHoc, dunn.test.results = TRUE)
   
 # Rxn Plot ----------------------------------------------------------------
 # Plot by animal pre & post & group
@@ -307,6 +396,37 @@ Rxn %>%
        x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)") +
   facet_wrap(~ fct_relevel(Duration, "300ms", "100ms", "50ms"), ncol = 1) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = "white")
+    # panel.grid.minor.x = element_line(color = "grey80"))
+  )
+
+
+# Rxn_overall Plotting ----------------------------------------------------
+
+Rxn_overall %>%
+  filter(!(Intensity %in% c("10", "20", "90"))) %>%
+  # filter(Duration != "50-300ms") %>%
+  ggplot(aes(x = Intensity, y = Rxn)) +
+  # geom_line(aes(color = Condition, linetype = ID))+
+  # geom_point(aes(color = Condition, fill = ID))+
+  # geom_point(aes(group = ID), color = "grey70")+
+  # geom_line(aes(group = ID, color = Condition))+
+  stat_summary(aes(color = Genotype, group = Genotype),
+               fun = mean,
+               fun.min = function(x) mean(x) - se(x),
+               fun.max = function(x) mean(x) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(0.1)) +
+  stat_summary(aes(color = Genotype, group = Genotype),
+               fun = mean,
+               geom = "point", position = position_dodge(0.1), size = 3) +
+  stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
+  labs(title = "Tsc2 Eker",
+       x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)") +
+  facet_wrap(`Dur (ms)` ~ fct_relevel(Duration, "300ms", "100ms", "50ms"), ncol = 2) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
