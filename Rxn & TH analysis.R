@@ -314,4 +314,16 @@ Rxn %>%
     # panel.grid.minor.x = element_line(color = "grey80"))
   )
 
+
+# # Clean an entry ----------------------------------------------------------
+# 
+# # Find string in loaded list
+# str_which(loaded_files, "20220715")
+# # Check for correct entry
+# loaded_files[[78]]
+# # remove item from list
+# loaded_files = loaded_files[-78]
+# 
+# #Clean files from the master dataframe
+# df = df %>% filter(!(Date < "2022-07-15" & Date > "2022-07-14" & ID == "RP 4"))
   
