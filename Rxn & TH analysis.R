@@ -6,7 +6,7 @@ source("~/GitHub/Behavior-autoanalysis/fixed import.R")
 library(tidyverse); library(dplyr); library(tidyr)
 
 # Analysis
-library(psycho)
+library(psycho); library(stringr)
 
 # Global Variables --------------------------------------------------------
 
@@ -224,6 +224,7 @@ TH_data <-
   mutate(dprime = map(data, dprime_calc)) %>% #print
   unnest(dprime) #%>% print
 
+
 # Threshold calculation calculation based on TH_cutoff intercept of fit curve
 # LOESS: Local Regression is a non-parametric approach that fits multiple regressions
 # see http://r-statistics.co/Loess-Regression-With-R.html
@@ -231,6 +232,7 @@ TH_calc <- function(df) {
   # Uncomment to see line fitting by a package which shows line
   # library(drda)
   # drda(dprime ~ dB, data = df) %>% plot
+  # print(df)
   fit = loess(dprime ~ dB, data = df)
   # plot(fit)
   TH = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff)$y #%>% print
@@ -240,13 +242,20 @@ TH_calc <- function(df) {
 
 TH <-
   TH_data %>%
-  select(ID:`Dur (ms)`, dprime, dB, Type) %>% #print
-  mutate(Type = fct_relevel(Type, levels = c("BBN", "4kHz", "8kHz", "16kHz", "32kHz"))) %>% #print
-  group_by(ID, Sex, Condition, BG_Type, BG_Intensity, `Dur (ms)`, Type) %>%
+  # filter(Duration == "50-300ms") %>%
+  # filter(ID == "RP 6") %>%
+  select(ID:`Dur (ms)`, dprime, dB) %>% #print
+  group_by(ID, Genotype, Duration, Stim_Block, `Dur (ms)`)  %>%
   nest() %>%
-  mutate(TH = map_dbl(data, TH_calc)) %>%
-  select(-data) %>%
-  spread(Type, TH)
+  mutate(TH = map_dbl(data, TH_calc)) %>% #print
+  select(-data) %>% #print
+  mutate(Duration = case_when(Duration == "50ms" ~ "Single",
+                              Duration == "100ms" ~ "Single",
+                              Duration == "300ms" ~ "Single",
+                              Duration == "50-300ms" ~ "50-300 (Mixed)",
+                              TRUE ~ as.character(Duration)),
+         TH = round(TH, digits = 1)) %>%
+  spread(`Dur (ms)`, TH)
 
 
 
