@@ -142,6 +142,8 @@ left_join(File_list, File_list_possible) %>%
 # Loaded File list for comparison
 File_list_temp = filter(File_list_possible, !(FileName %in% loaded_files))
 
+writeLines(paste("Loading", nrow(File_list_temp), "files"))
+
 
 # Load New Files ----------------------------------------------------------
 for(i in 1:nrow(File_list_temp)) {       # for-loop over rows
@@ -172,11 +174,7 @@ rm(list = c("File_list_temp", "i"))
 # df = File_list %>%
 #       select(-Folder) %>%
 #       right_join(df, by = c("Date", "ID"))
-# 
-# df = Master_summary %>%
-#       select(ID, Date, Stim_Block) %>%
-#       right_join(df, by = c("Date", "ID")) %>%
-#       relocate(Stim_Block, .after = File)
+
 
 # Threshold Calculation ---------------------------------------------------
 # Signal detection index calculation by the psycho package. We use d' a sensitivity measure.
@@ -184,11 +182,11 @@ rm(list = c("File_list_temp", "i"))
 
 # Creates a properly formatted table for psycho by adding the overall CR/FA to each row
 dprime_table <- function(df) {
-  # print(df)
+  #print(df)
   check = df %>% filter(Type == 0) %>% count() %>% as.numeric() #%>% print
-  CRnum = (if (check == 1) filter(df, Type == 0) %>% .$C.R. %>% as.numeric() else check) #%>% print
-  FAnum = (if (check == 1) filter(df, Type == 0) %>% .$F.A. %>% as.numeric() else check) #%>% print
-  new_df = df %>% filter(Type == 1) %>% rename(CR = C.R., FA = F.A.) %>%
+  CRnum = (if (check == 1) filter(df, Type == 0) %>% .$CR %>% as.numeric() else check) #%>% print
+  FAnum = (if (check == 1) filter(df, Type == 0) %>% .$FA %>% as.numeric() else check) #%>% print
+  new_df = df %>% filter(Type == 1) %>% 
     mutate(CR = ifelse(is.na(CR), CRnum, CR),
            FA = ifelse(is.na(FA), FAnum, CR),
            Hit = as.numeric(Hit),
@@ -205,10 +203,7 @@ dprime_calc <- function(df) {
          n_cr = df$CR,
          adjusted = TRUE) %>%
     as_tibble() %>%
-    mutate(dB = df$`Inten (dB)`,
-           Type =  case_when(df$`Freq (kHz)` == 0 ~ "BBN",
-                             TRUE ~ paste0(df$`Freq (kHz)`, "kHz"))# %>% print
-    ) #%>% print
+    mutate(dB = df$`Inten (dB)`) #%>% print
 }
 
 writeLines("Calculating Thresholds")
@@ -216,16 +211,18 @@ writeLines("Calculating Thresholds")
 # Calculate d' and save (along with hit/miss/CR/FA table)
 TH_data <-
   df %>%
-  group_by(ID, Genotype, Stim_Block, `Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>% #View
-  summarise(count = n(), .groups = "keep") %>%
+  group_by(ID, Genotype, Duration, Stim_Block, `Dur (ms)`, Type, `Inten (dB)`, Response) %>% 
+  summarise(count = n(), .groups = "keep") %>% 
   spread(Response, count) %>% #View
-  group_by(ID, Sex, Condition, Stim, BG_Type, BG_Intensity, `Dur (ms)`) %>% #print
+  group_by(ID, Genotype, Duration, Stim_Block) %>% #print
   nest() %>%
-  mutate(dprime_data = map(data, dprime_table),
-         dprime = map(dprime_data, dprime_calc)) %>% #print
+  mutate(dprime_data = map(data, dprime_table)) %>% 
+  select(-data) %>% 
+  unnest(cols = c(dprime_data)) %>%
+  group_by(ID, Genotype, Duration, Stim_Block, `Dur (ms)`) %>% #print
+  nest() %>%
+  mutate(dprime = map(data, dprime_calc)) %>% #print
   unnest(dprime) #%>% print
-
-
 
 # Threshold calculation calculation based on TH_cutoff intercept of fit curve
 # LOESS: Local Regression is a non-parametric approach that fits multiple regressions
