@@ -1,7 +1,7 @@
 # Package loading ---------------------------------------------------------
 
 # data loading/manipulation
-library(R.matlab);
+library(readxl); library(R.matlab)
 source("~/GitHub/Behavior-autoanalysis/fixed import.R")
 library(tidyverse); library(dplyr); library(tidyr)
 
@@ -40,7 +40,7 @@ read_excel_allsheets <- function(filename, range, sheetlist, tibble = FALSE) {
                 rename(Date = 1, File = 2,
                        Weight = 3, WeightChange = 4,
                        Trials = 5, Hit = 6, FA = 7,
-                       '10db' = 8, '20db' = 9, '30dB' = 10, '40dB' = 11, '50dB' = 12, '60dB' = 13, '70dB' = 14, '80dB' = 15, '90dB' = 16,
+                       '10dB' = 8, '20dB' = 9, '30dB' = 10, '40dB' = 11, '50dB' = 12, '60dB' = 13, '70dB' = 14, '80dB' = 15, '90dB' = 16,
                        TH = 17, Phase = 18) %>%
                 # remove empty days
                 filter(!(is.na(Date))) %>%
@@ -87,7 +87,7 @@ Tsc_Data <-
   # Filter out FA correction, Maintenance, & Errors
   filter(!(Phase %in% c("FA correction", "Maintaince", "Error"))) %>%
   # Filter out Training and retraining
-  filter(!(Phase %in% c("BBN Training"))) %>%
+  filter(!(Phase %in% c("BBN Training", "Tone Training"))) %>%
   mutate(
     Intensity = gsub("BBN_(.*dB)_(.*?ms)_.*?s", "\\1", File), # extracts intensity from name of file
     Duration = gsub("BBN_(.*dB)_(.*?ms)_.*?s", "\\2", File) # extracts duration from name of file
@@ -98,7 +98,7 @@ rm(Tsc_Data_Raw)
 
 # # File Loading Initialization ---------------------------------------------
 # # Only run once.
-# # File_list_temp = head(File_list_possible, 2)
+# File_list_temp = head(File_list_possible, 2)
 # df = tibble()
 # Master_summary = tibble()
 # loaded_files = list()
@@ -134,10 +134,12 @@ File_list_possible <-
   )
 
 # Missing Files
+Missing_files <-
 left_join(File_list, File_list_possible) %>% 
   filter(is.na(FileName)) %>% 
-  filter(Date != Sys.Date()) %>% 
-  View
+  filter(Date <= Sys.Date())
+
+View(Missing_files)
 
 # Loaded File list for comparison
 File_list_temp = filter(File_list_possible, !(FileName %in% loaded_files))
@@ -148,34 +150,33 @@ writeLines(paste("Loading", nrow(File_list_temp), "files"))
 # Load New Files ----------------------------------------------------------
 # Note that I have mistaken stim_block for step_size
 
-for(i in 1:nrow(File_list_temp)) {       # for-loop over rows
-  file = File_list_temp[[i, "FileName"]]
-  ID = File_list_temp[[i, "ID"]]
-  Date = File_list_temp[[i, "Date"]]
-  Phase = File_list_temp[[i, "Phase"]]
-  Genotype = File_list_temp[[i, "Genotype"]]
-  Intensity = File_list_temp[[i, "Intensity"]]
-  Duration = File_list_temp[[i, "Duration"]]
-  print(paste("Laoding:", ID, "on", Date))
-  current_file = readMat(file)
-  source("~/GitHub/Tsc2_Analysis/matlab import.R")
-  loaded_files = append(loaded_files, file)
-  df = run_data %>%
-        mutate(ID = ID, Genotype = Genotype, Date = Date, Stim_Block = stim_block_size, Phase = Phase, Intensity = Intensity, Duration = Duration) %>%
-        rbind(df)
-  Master_summary = tibble_row(ID = ID, Date = Date, Intensity = Intensity, Duration = Duration, Trials = total_trials, `Hit%` = hits_calc, `FA%` = FAs_calc, Stim_Block_Size = stim_block_size) %>%
-                   rbind(Master_summary)
+if(nrow(File_list_temp) > 0) {
+  for(i in 1:nrow(File_list_temp)) {       # for-loop over rows
+    file = File_list_temp[[i, "FileName"]]
+    ID = File_list_temp[[i, "ID"]]
+    Date = File_list_temp[[i, "Date"]]
+    Phase = File_list_temp[[i, "Phase"]]
+    Genotype = File_list_temp[[i, "Genotype"]]
+    Intensity = File_list_temp[[i, "Intensity"]]
+    Duration = File_list_temp[[i, "Duration"]]
+    print(paste("Laoding:", ID, "on", Date))
+    current_file = readMat(file)
+    source("~/GitHub/Tsc2_Analysis/matlab import.R")
+    loaded_files = append(loaded_files, file)
+    df = run_data %>%
+          mutate(ID = ID, Genotype = Genotype, Date = Date, Stim_Block = stim_block_size, Phase = Phase, Intensity = Intensity, Duration = Duration) %>%
+          rbind(df)
+    Master_summary = tibble_row(ID = ID, Date = Date, Intensity = Intensity, Duration = Duration, Trials = total_trials, `Hit%` = hits_calc, `FA%` = FAs_calc, Stim_Block_Size = stim_block_size) %>%
+                     rbind(Master_summary)
+    
+    # cleanup extraneous copies of the current file
+    rm(list = c("run_data", 'stim_master_list', 'CRs_calc', 'FAs_calc', 'hits_calc', 'misses_calc', 'stim_block_size', 'stim_type', 'total_trials'))
+    rm(list = c("Date", "ID", "file", "Phase", "Genotype", "Intensity", "Duration"))
+  }
   
-  # cleanup extraneous copies of the current file
-  rm(list = c("run_data", 'stim_master_list', 'CRs_calc', 'FAs_calc', 'hits_calc', 'misses_calc', 'stim_block_size', 'stim_type', 'total_trials'))
-  rm(list = c("Date", "ID", "file", "Phase", "Genotype", "Intensity", "Duration"))
-}
-
-rm(list = c("File_list_temp", "i"))
-# 
-# df = File_list %>%
-#       select(-Folder) %>%
-#       right_join(df, by = c("Date", "ID"))
+  rm(list = c("File_list_temp", "i"))
+  writeLines("Done")
+} else {writeLines("Done")}
 
 
 # Threshold Calculation ---------------------------------------------------
@@ -256,7 +257,10 @@ TH <-
                               Duration == "300ms" ~ "Single",
                               Duration == "50-300ms" ~ "50-300 (Mixed)",
                               TRUE ~ as.character(Duration)),
-         TH = round(TH, digits = 1)) %>%
+         TH = round(TH, digits = 1))
+
+TH_view <-  
+  TH %>%
   spread(`Dur (ms)`, TH)
 
 
@@ -278,7 +282,7 @@ writeLines("Calculating average RXN time")
 TH_filter <- function(df) {
   # print(df)
   ID = unique(df$ID) # %>% print
-  Dur = unique(df$`Dur (ms)`) # %>% print
+  Dur = unique(df$`Dur (ms)`)#  %>% print
   kHz = unique(df$`Freq (kHz)`)
   kHz = if_else(kHz == "0", "BBN", paste0(kHz,"kHz")) # %>% print
   
@@ -287,7 +291,7 @@ TH_filter <- function(df) {
   
   cuttoff = TH %>% # have to use UQ to force the evaluation of the variable
     filter(Duration == "Single") %>% 
-    filter(ID == UQ(ID) & `Dur (ms)` == UQ(Dur)) %>% .$TH # %>% print
+    filter(ID == UQ(ID) & `Dur (ms)` == UQ(Dur)) %>% .$TH #%>% print
   
   cuttoff = ifelse(identical(cuttoff, numeric(0)), -99, cuttoff) #%>% print
   # ifelse(identical(cuttoff, numeric(0)), df, filter(df, `Inten (dB)` >= UQ(cuttoff))) %>% print
@@ -343,19 +347,22 @@ Rxn_overall_by_Duration <-
 # ANOVA
 # Rxn.aov = aov(Rxn ~ Intensity * Duration * Genotype * `Dur (ms)`, data = Rxn_overall_by_Duration)
 Rxn.aov = aov(Rxn ~ Intensity * Genotype * `Dur (ms)`, data = Rxn_overall)
-Rxn.aov = aov(Rxn ~ Genotype, data = Rxn_overall)
+# Rxn.aov = aov(Rxn ~ Genotype, data = Rxn_overall)
   
 # Parametric check
-Rxn.aov$residuals %>%
-  shapiro.test()
+shapiro.test(Rxn.aov$residuals)
+
+is_parametric = shapiro.test(Rxn.aov$residuals)$p.value > 0.05
+print(is_parametric)
 
 # # Summary
 # summary(Rxn.aov)
 
 # Non-Parametric ANOVA - Genotype
-# friedman.test(Rxn ~ Genotype | Duration, data = Rxn_overall)
 kruskal.test(Rxn ~ interaction(`Dur (ms)`, Genotype, Intensity), data = Rxn_overall)
-kruskal.test(Rxn ~ Genotype, data = Rxn_overall)
+kruskal.test(Rxn ~ Genotype, 
+             data = Rxn_overall_by_Duration %>% 
+                    filter(!(Duration == "Mixed")))
 
 # Non-Parametric ANOVA - DURATION
 kruskal.test(Rxn ~ interaction(Intensity, Duration, `Dur (ms)`), data = Rxn_overall_by_Duration)
@@ -364,7 +371,7 @@ kruskal.test(Rxn ~ interaction(Intensity, Duration, `Dur (ms)`), data = Rxn_over
 postHoc <- 
   dunnTest(Rxn ~ interaction(Duration, `Dur (ms)`),
            data = Rxn_overall_by_Duration,
-           method = "bh")
+           method = "bonf")
 
 print(postHoc, dunn.test.results = TRUE)
   
@@ -374,46 +381,13 @@ print(postHoc, dunn.test.results = TRUE)
 # Calculate standard error (SE) like standard deviation (SD)
 se <- function(x, ...) {sqrt(var(x, ...)/length(x))}
 
-
-Rxn %>%
-  filter(!(Intensity %in% c("10db", "20db", "90dB"))) %>%
-  filter(Duration != "50-300ms") %>%
+Rxn_overall_by_Duration %>%
+  filter(!(Intensity %in% c("90"))) %>%
+  filter(!(Duration == "50-300ms")) %>%
+  mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
   ggplot(aes(x = Intensity, y = Rxn)) +
-  # geom_line(aes(color = Condition, linetype = ID))+
-  # geom_point(aes(color = Condition, fill = ID))+
-  # geom_point(aes(group = ID), color = "grey70")+
-  # geom_line(aes(group = ID, color = Condition))+
-  stat_summary(aes(color = Genotype, group = Genotype),
-               fun = mean,
-               fun.min = function(x) mean(x) - se(x),
-               fun.max = function(x) mean(x) + se(x),
-               geom = "errorbar", width = 1, position = position_dodge(0.1)) +
-  stat_summary(aes(color = Genotype, group = Genotype),
-               fun = mean,
-               geom = "point", position = position_dodge(0.1), size = 3) +
-  stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
-  labs(title = "Tsc Eker",
-       x = "Intensity (dB)",
-       y = "Reaction time (ms, mean +/- SE)") +
-  facet_wrap(~ fct_relevel(Duration, "300ms", "100ms", "50ms"), ncol = 1) +
-  theme_classic() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    panel.grid.major.x = element_line(color = "white")
-    # panel.grid.minor.x = element_line(color = "grey80"))
-  )
-
-
-# Rxn_overall Plotting ----------------------------------------------------
-
-Rxn_overall %>%
-  filter(!(Intensity %in% c("10", "20", "90"))) %>%
-  # filter(Duration != "50-300ms") %>%
-  ggplot(aes(x = Intensity, y = Rxn)) +
-  # geom_line(aes(color = Condition, linetype = ID))+
-  # geom_point(aes(color = Condition, fill = ID))+
-  # geom_point(aes(group = ID), color = "grey70")+
-  # geom_line(aes(group = ID, color = Condition))+
+  # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
+  # geom_line(aes(group = ID, color = Genotype), alpha = 0.3)+
   stat_summary(aes(color = Genotype, group = Genotype),
                fun = mean,
                fun.min = function(x) mean(x) - se(x),
@@ -424,26 +398,88 @@ Rxn_overall %>%
                geom = "point", position = position_dodge(0.1), size = 3) +
   stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
   labs(title = "Tsc2 Eker",
+       caption = paste("Date:", Sys.Date()),
        x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)") +
-  facet_wrap(`Dur (ms)` ~ fct_relevel(Duration, "300ms", "100ms", "50ms"), ncol = 2) +
+  scale_x_continuous(breaks = seq(20, 80, by = 10)) +
+  facet_wrap( ~ `Dur (ms)`, ncol = 1) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
-    panel.grid.major.x = element_line(color = "white")
-    # panel.grid.minor.x = element_line(color = "grey80"))
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+# OLD from summary sheet
+# Rxn %>%
+#   filter(!(Intensity %in% c("10db", "20db", "90dB"))) %>%
+#   filter(Duration != "50-300ms") %>%
+#   ggplot(aes(x = Intensity, y = Rxn)) +
+#   # geom_line(aes(color = Condition, linetype = ID))+
+#   # geom_point(aes(color = Condition, fill = ID))+
+#   # geom_point(aes(group = ID), color = "grey70")+
+#   # geom_line(aes(group = ID, color = Condition))+
+#   stat_summary(aes(color = Genotype, group = Genotype),
+#                fun = mean,
+#                fun.min = function(x) mean(x) - se(x),
+#                fun.max = function(x) mean(x) + se(x),
+#                geom = "errorbar", width = 1, position = position_dodge(0.1)) +
+#   stat_summary(aes(color = Genotype, group = Genotype),
+#                fun = mean,
+#                geom = "point", position = position_dodge(0.1), size = 3) +
+#   stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
+#   labs(title = "Tsc Eker",
+#        x = "Intensity (dB)",
+#        y = "Reaction time (ms, mean +/- SE)") +
+#   facet_wrap(~ fct_relevel(Duration, "300ms", "100ms", "50ms"), ncol = 1) +
+#   theme_classic() +
+#   theme(
+#     plot.title = element_text(hjust = 0.5),
+#     panel.grid.major.x = element_line(color = "white")
+#     # panel.grid.minor.x = element_line(color = "grey80"))
+#   )
+
+
+# Rxn_overall Plotting ----------------------------------------------------
+
+Rxn_overall_by_Duration %>%
+  filter(!(Intensity %in% c("90"))) %>%
+  mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
+  ggplot(aes(x = Intensity, y = Rxn)) +
+  # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
+  # geom_line(aes(group = ID, color = Genotype), alpha = 0.3)+
+  stat_summary(aes(color = Genotype, group = Genotype),
+               fun = mean,
+               fun.min = function(x) mean(x) - se(x),
+               fun.max = function(x) mean(x) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(0.1)) +
+  stat_summary(aes(color = Genotype, group = Genotype),
+               fun = mean,
+               geom = "point", position = position_dodge(0.1), size = 3) +
+  stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
+  labs(title = "Tsc2 Eker",
+       caption = paste("Date:", Sys.Date()),
+       x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)") +
+  scale_x_continuous(breaks = seq(20, 80, by = 10)) +
+  facet_wrap(`Dur (ms)` ~ Duration, ncol = 2) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
 
 
 # # Clean an entry ----------------------------------------------------------
 # 
 # # Find string in loaded list
-# str_which(loaded_files, "20220715")
+# str_which(loaded_files, "20220817.*RP5")
 # # Check for correct entry
-# loaded_files[[78]]
+# loaded_files[[221]]
 # # remove item from list
-# loaded_files = loaded_files[-78]
+# loaded_files = loaded_files[-221]
 # 
-# #Clean files from the master dataframe
-# df = df %>% filter(!(Date < "2022-07-15" & Date > "2022-07-14" & ID == "RP 4"))
+# # Check lines you are deleting
+# df %>% filter((Date < "2022-08-17" & Date > "2022-08-16" & ID == "RP 5"))
+# # Clean files from the master dataframe
+# df = df %>% filter(!(Date < "2022-08-17" & Date > "2022-08-16" & ID == "RP 5"))
   
