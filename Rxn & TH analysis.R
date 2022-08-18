@@ -143,6 +143,7 @@ View(Missing_files)
 
 # Loaded File list for comparison
 File_list_temp = filter(File_list_possible, !(FileName %in% loaded_files))
+file_count = nrow(File_list_temp)
 
 writeLines(paste("Loading", nrow(File_list_temp), "files"))
 
@@ -342,131 +343,11 @@ Rxn_overall_by_Duration <-
                               Duration == "50-300ms" ~ "Mix"))
 
 
-# Rxn testing -------------------------------------------------------------
 
-# ANOVA
-# Rxn.aov = aov(Rxn ~ Intensity * Duration * Genotype * `Dur (ms)`, data = Rxn_overall_by_Duration)
-Rxn.aov = aov(Rxn ~ Intensity * Genotype * `Dur (ms)`, data = Rxn_overall)
-# Rxn.aov = aov(Rxn ~ Genotype, data = Rxn_overall)
-  
-# Parametric check
-shapiro.test(Rxn.aov$residuals)
-
-is_parametric = shapiro.test(Rxn.aov$residuals)$p.value > 0.05
-print(is_parametric)
-
-# # Summary
-# summary(Rxn.aov)
-
-# Non-Parametric ANOVA - Genotype
-kruskal.test(Rxn ~ interaction(`Dur (ms)`, Genotype, Intensity), data = Rxn_overall)
-kruskal.test(Rxn ~ Genotype, 
-             data = Rxn_overall_by_Duration %>% 
-                    filter(!(Duration == "Mixed")))
-
-# Non-Parametric ANOVA - DURATION
-kruskal.test(Rxn ~ interaction(Intensity, Duration, `Dur (ms)`), data = Rxn_overall_by_Duration)
-
-
-postHoc <- 
-  dunnTest(Rxn ~ interaction(Duration, `Dur (ms)`),
-           data = Rxn_overall_by_Duration,
-           method = "bonf")
-
-print(postHoc, dunn.test.results = TRUE)
-  
-# Rxn Plot ----------------------------------------------------------------
-# Plot by animal pre & post & group
-  
+# Graphing ----------------------------------------------------------------
 # Calculate standard error (SE) like standard deviation (SD)
 se <- function(x, ...) {sqrt(var(x, ...)/length(x))}
 
-Rxn_overall_by_Duration %>%
-  filter(!(Intensity %in% c("90"))) %>%
-  filter(!(Duration == "50-300ms")) %>%
-  mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
-  ggplot(aes(x = Intensity, y = Rxn)) +
-  # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
-  # geom_line(aes(group = ID, color = Genotype), alpha = 0.3)+
-  stat_summary(aes(color = Genotype, group = Genotype),
-               fun = mean,
-               fun.min = function(x) mean(x) - se(x),
-               fun.max = function(x) mean(x) + se(x),
-               geom = "errorbar", width = 1, position = position_dodge(0.1)) +
-  stat_summary(aes(color = Genotype, group = Genotype),
-               fun = mean,
-               geom = "point", position = position_dodge(0.1), size = 3) +
-  stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
-  labs(title = "Tsc2 Eker",
-       caption = paste("Date:", Sys.Date()),
-       x = "Intensity (dB)",
-       y = "Reaction time (ms, mean +/- SE)") +
-  scale_x_continuous(breaks = seq(20, 80, by = 10)) +
-  facet_wrap( ~ `Dur (ms)`, ncol = 1) +
-  theme_classic() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
-  )
-
-# OLD from summary sheet
-# Rxn %>%
-#   filter(!(Intensity %in% c("10db", "20db", "90dB"))) %>%
-#   filter(Duration != "50-300ms") %>%
-#   ggplot(aes(x = Intensity, y = Rxn)) +
-#   # geom_line(aes(color = Condition, linetype = ID))+
-#   # geom_point(aes(color = Condition, fill = ID))+
-#   # geom_point(aes(group = ID), color = "grey70")+
-#   # geom_line(aes(group = ID, color = Condition))+
-#   stat_summary(aes(color = Genotype, group = Genotype),
-#                fun = mean,
-#                fun.min = function(x) mean(x) - se(x),
-#                fun.max = function(x) mean(x) + se(x),
-#                geom = "errorbar", width = 1, position = position_dodge(0.1)) +
-#   stat_summary(aes(color = Genotype, group = Genotype),
-#                fun = mean,
-#                geom = "point", position = position_dodge(0.1), size = 3) +
-#   stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
-#   labs(title = "Tsc Eker",
-#        x = "Intensity (dB)",
-#        y = "Reaction time (ms, mean +/- SE)") +
-#   facet_wrap(~ fct_relevel(Duration, "300ms", "100ms", "50ms"), ncol = 1) +
-#   theme_classic() +
-#   theme(
-#     plot.title = element_text(hjust = 0.5),
-#     panel.grid.major.x = element_line(color = "white")
-#     # panel.grid.minor.x = element_line(color = "grey80"))
-#   )
-
-
-# Rxn_overall Plotting ----------------------------------------------------
-
-Rxn_overall_by_Duration %>%
-  filter(!(Intensity %in% c("90"))) %>%
-  mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
-  ggplot(aes(x = Intensity, y = Rxn)) +
-  # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
-  # geom_line(aes(group = ID, color = Genotype), alpha = 0.3)+
-  stat_summary(aes(color = Genotype, group = Genotype),
-               fun = mean,
-               fun.min = function(x) mean(x) - se(x),
-               fun.max = function(x) mean(x) + se(x),
-               geom = "errorbar", width = 1, position = position_dodge(0.1)) +
-  stat_summary(aes(color = Genotype, group = Genotype),
-               fun = mean,
-               geom = "point", position = position_dodge(0.1), size = 3) +
-  stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
-  labs(title = "Tsc2 Eker",
-       caption = paste("Date:", Sys.Date()),
-       x = "Intensity (dB)",
-       y = "Reaction time (ms, mean +/- SE)") +
-  scale_x_continuous(breaks = seq(20, 80, by = 10)) +
-  facet_wrap(`Dur (ms)` ~ Duration, ncol = 2) +
-  theme_classic() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
-  )
 
 
 # # Clean an entry ----------------------------------------------------------
