@@ -160,7 +160,7 @@ if(nrow(File_list_temp) > 0) {
     Genotype = File_list_temp[[i, "Genotype"]]
     Intensity = File_list_temp[[i, "Intensity"]]
     Duration = File_list_temp[[i, "Duration"]]
-    print(paste("Laoding:", ID, "on", Date))
+    writeLines(paste("Laoding:", ID, "on", Date))
     current_file = readMat(file)
     source("~/GitHub/Tsc2_Analysis/matlab import.R")
     loaded_files = append(loaded_files, file)
