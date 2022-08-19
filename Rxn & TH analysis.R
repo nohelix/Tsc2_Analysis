@@ -253,9 +253,9 @@ TH <-
   nest() %>%
   mutate(TH = map_dbl(data, TH_calc)) %>% #print
   select(-data) %>% #print
-  mutate(Duration = case_when(Duration == "50ms" ~ "Single",
-                              Duration == "100ms" ~ "Single",
-                              Duration == "300ms" ~ "Single",
+  mutate(Duration = case_when(Duration == "50ms" ~ "Alone",
+                              Duration == "100ms" ~ "Alone",
+                              Duration == "300ms" ~ "Alone",
                               Duration == "50-300ms" ~ "50-300 (Mixed)",
                               TRUE ~ as.character(Duration)),
          TH = round(TH, digits = 1))
@@ -291,7 +291,7 @@ TH_filter <- function(df) {
   # print(paste(ID))
   
   cuttoff = TH %>% # have to use UQ to force the evaluation of the variable
-    filter(Duration == "Single") %>% 
+    filter(Duration == "Alone") %>% 
     filter(ID == UQ(ID) & `Dur (ms)` == UQ(Dur)) %>% .$TH #%>% print
   
   cuttoff = ifelse(identical(cuttoff, numeric(0)), -99, cuttoff) #%>% print
@@ -337,9 +337,9 @@ Rxn_overall_by_Duration <-
             Rxn = mean(`Reaction_(s)`, na.rm = TRUE) * 1000, 
             .groups = "drop") %>%
   rename(Intensity = `Inten (dB)`) %>%
-  mutate(Duration = case_when(Duration == "50ms" ~ "",
-                              Duration == "100ms" ~ "",
-                              Duration == "300ms" ~ "",
+  mutate(Duration = case_when(Duration == "50ms" ~ "Alone",
+                              Duration == "100ms" ~ "Alone",
+                              Duration == "300ms" ~ "Alone",
                               Duration == "50-300ms" ~ "Mix"))
 
 
