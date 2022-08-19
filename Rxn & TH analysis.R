@@ -6,7 +6,7 @@ source("~/GitHub/Behavior-autoanalysis/fixed import.R")
 library(tidyverse); library(dplyr); library(tidyr)
 
 # Analysis
-library(psycho); library(stringr); library(FSA)
+library(psycho); library(stringr)
 
 # Global Variables --------------------------------------------------------
 
