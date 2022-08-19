@@ -18,12 +18,25 @@ writeLines(paste("Analysis run on", Sys.Date(), "
            There were", nrow(Missing_files), "missing files."))
 ```
 
+# Thresholds
+```{r}
+TH_view %>%
+  filter(Duration == "Alone") %>%
+  ungroup %>%
+  select(-Duration)
+
+TH_view %>%
+  group_by(ID) %>%
+  filter(n() > 1)
+  
+```
+
 # Model
 
 Modeling Type:
 
 ```{r Normality, echo=FALSE}
-Rxn.aov = aov(Rxn ~ Intensity * Genotype * `Dur (ms)`, data = Rxn_overall)
+Rxn.aov = aov(Rxn ~ Intensity * Genotype * Duration * `Dur (ms)`, data = Rxn_overall_by_Duration)
 
 is_parametric = shapiro.test(Rxn.aov$residuals)$p.value > 0.05
 
