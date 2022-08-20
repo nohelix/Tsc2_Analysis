@@ -256,8 +256,8 @@ TH <-
   mutate(Duration = case_when(Duration == "50ms" ~ "Alone",
                               Duration == "100ms" ~ "Alone",
                               Duration == "300ms" ~ "Alone",
-                              Duration == "50-300ms" ~ "50-300 (Mixed)",
-                              TRUE ~ as.character(Duration)) %>% fct_relevel("50-300 (Mixed)", "Alone"),
+                              Duration == "50-300ms" ~ "50-300ms (Mixed)",
+                              TRUE ~ as.character(Duration)),
          TH = round(TH, digits = 1))
 
 TH_view <-  
