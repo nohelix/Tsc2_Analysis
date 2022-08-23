@@ -14,7 +14,7 @@ source("~/GitHub/Tsc2_Analysis/Rxn & TH analysis.R")
 # Stats
 ```{r Stats}
 writeLines(paste("Analysis run on", Sys.Date(), "
-           Data last loaded on", head(df$Date, 1), "adding", file_count, "new files.
+           Data last loaded on", head(sort(df$Date, decreasing = TRUE), 1), "adding", file_count, "new files.
            There were", nrow(Missing_files), "missing files."))
 ```
 
@@ -94,7 +94,7 @@ Rxn_overall_by_Duration %>%
                geom = "point", position = position_dodge(0.1), size = 3) +
   stat_summary(aes(linetype = Duration, group = Duration), fun = mean, geom = "line") +
   labs(title = "Tsc2 Eker",
-       caption = paste("Date:", head(df$Date)),
+       caption = paste("Date:", head(sort(df$Date, decreasing = TRUE))),
        x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)") +
   scale_x_continuous(breaks = seq(20, 80, by = 10)) +
@@ -130,7 +130,7 @@ Rxn_overall_by_Duration %>%
                geom = "point", position = position_dodge(0.1), size = 3) +
   stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
   labs(title = "Tsc2 Eker",
-       caption = paste("Date:", head(df$Date)),
+       caption = paste("Date:", head(sort(df$Date, decreasing = TRUE))),
        x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)") +
   scale_x_continuous(breaks = seq(20, 80, by = 10)) +
@@ -185,7 +185,7 @@ Rxn_overall_by_Duration %>%
                geom = "point", position = position_dodge(0.1), size = 3) +
   stat_summary(aes(color = Genotype, linetype = Duration, group = interaction(Genotype, Duration)), fun = mean, geom = "line") +
   labs(title = "Tsc2 Eker",
-       caption = paste("Data trough:", head(df$Date)),
+       caption = paste("Data trough:", head(sort(df$Date, decreasing = TRUE))),
        x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)") +
   scale_x_continuous(breaks = seq(20, 80, by = 10)) +
