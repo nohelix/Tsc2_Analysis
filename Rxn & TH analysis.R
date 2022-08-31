@@ -89,8 +89,8 @@ Tsc_Data <-
   # Filter out Training and retraining
   filter(!(Phase %in% c("BBN Training", "Tone Training"))) %>%
   mutate(
-    Intensity = gsub("BBN_(.*dB)_(.*?ms)_.*?s", "\\1", File), # extracts intensity from name of file
-    Duration = gsub("BBN_(.*dB)_(.*?ms)_.*?s", "\\2", File) # extracts duration from name of file
+    Intensity = gsub("BBN_(.*dB)_(.*?ms)_.*?s", "\\1", File) %>% str_remove("_TR\\d+ms"), # extracts intensity from name of file
+    Duration = gsub("BBN_(.*dB)_(.*?ms)_.*?s", "\\2", File) %>% str_remove("_TR\\d+ms") # extracts duration from name of file
   )
 
 rm(Tsc_Data_Raw)
@@ -306,7 +306,7 @@ Data_over_TH <-
   filter(Type == 1 & Response == "Hit") %>%
   filter(`Inten (dB)` != -100) %>%
   mutate(Rat = .$ID, Dur = .$`Dur (ms)`) %>%
-  group_by(Rat, Genotype, Dur, Duration) %>%
+  group_by(Rat, Genotype, Dur, Duration, Phase) %>%
   nest %>%
   mutate(data = map(data, TH_filter)) #%>% print
 
@@ -318,7 +318,7 @@ Rxn_overall <-
   filter(Type == 1 & Response == "Hit") %>%
   filter(`Inten (dB)` != -100) %>% 
   # Filter by TH table so that only reaction times above thresholds are included
-  group_by(ID, Genotype, `Dur (ms)`, `Inten (dB)`) %>%
+  group_by(ID, Genotype, `Dur (ms)`, `Inten (dB)`, Phase) %>%
   summarise(count = n_distinct(Date),
             Rxn = mean(`Reaction_(s)`, na.rm = TRUE) * 1000, 
             .groups = "drop") %>%
@@ -332,7 +332,7 @@ Rxn_overall_by_Duration <-
   filter(Type == 1 & Response == "Hit") %>%
   filter(`Inten (dB)` != -100) %>% 
   # Filter by TH table so that only reaction times above thresholds are included
-  group_by(ID, Genotype, Duration, `Dur (ms)`, `Inten (dB)`) %>%
+  group_by(ID, Genotype, Duration, `Dur (ms)`, `Inten (dB)`, Phase) %>%
   summarise(count = n_distinct(Date),
             Rxn = mean(`Reaction_(s)`, na.rm = TRUE) * 1000, 
             .groups = "drop") %>%
@@ -353,14 +353,15 @@ se <- function(x, ...) {sqrt(var(x, ...)/length(x))}
 # # Clean an entry ----------------------------------------------------------
 # 
 # # Find string in loaded list
-# str_which(loaded_files, "20220817.*RP5")
+# temp = str_which(loaded_files, "20220826.*RP1")
+# print(temp)
 # # Check for correct entry
-# loaded_files[[221]]
+# loaded_files[[temp]]
 # # remove item from list
-# loaded_files = loaded_files[-221]
+# loaded_files = loaded_files[-temp]
+# rm(temp)
 # 
 # # Check lines you are deleting
-# df %>% filter((Date < "2022-08-17" & Date > "2022-08-16" & ID == "RP 5"))
+# df %>% filter((Date < "2022-08-30" & Date > "2022-08-25" & ID == "RP 1"))
 # # Clean files from the master dataframe
-# df = df %>% filter(!(Date < "2022-08-17" & Date > "2022-08-16" & ID == "RP 5"))
-  
+# df = df %>% filter(!(Date < "2022-08-30" & Date > "2022-08-25" & ID == "RP 1"))

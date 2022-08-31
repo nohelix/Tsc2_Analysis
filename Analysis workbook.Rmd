@@ -1,10 +1,13 @@
 ---
 title: "Tsc2 Report"
-output: 
-  html_notebook: 
+output:
+  html_notebook:
     code_folding: hide
     toc: yes
-editor_options: 
+  html_document:
+    toc: yes
+    df_print: paged
+editor_options:
   chunk_output_type: inline
 ---
 ```{r Data import & prep, include=FALSE}
