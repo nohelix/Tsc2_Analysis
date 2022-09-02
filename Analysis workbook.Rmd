@@ -23,14 +23,23 @@ writeLines(paste("Analysis run on", Sys.Date(), "
 
 # Thresholds
 ```{r}
+TH.aov = aov(TH ~ Genotype * Duration * `Dur (ms)` + Error(ID), data = TH)
+summary(TH.aov)
+
 TH_view %>%
   filter(Duration == "Alone") %>%
   ungroup %>%
-  select(-Duration)
+  select(-Duration) %>%
+  group_by(Genotype) %>%
+  summarise(n = n(), 
+            `50ms` = mean(na.omit(`50`)) %>% round(digits = 1), 
+            `100ms` = mean(na.omit(`100`)) %>% round(digits = 1), 
+            `300ms` = mean(na.omit(`300`)) %>% round(digits = 1))
 
 TH_view %>%
   group_by(ID) %>%
   filter(n() > 1)
+
   
 ```
 
@@ -60,7 +69,7 @@ kruskal.test(Rxn ~ interaction(Intensity, Genotype, Duration, `Dur (ms)`), data 
 # 
 # 
 postHoc <- 
-  dunnTest(Rxn ~ interaction(Duration, `Dur (ms)`),
+  FSA::dunnTest(Rxn ~ interaction(Duration, `Dur (ms)`),
            data = Rxn_overall_by_Duration,
            method = "bonf")
 
@@ -114,11 +123,11 @@ Rxn_overall_by_Duration %>%
 ```{r Genotype Effect, fig.height = 9.5, fig.width = 8}
 kruskal.test(Rxn ~ Genotype, 
              data = Rxn_overall_by_Duration %>% 
-                    filter(!(Duration == "Mixed")))
+                    filter(!(Duration == "Mixed" & Phase == "BBN Rotating")))
 
 Rxn_overall_by_Duration %>%
   filter(!(Intensity %in% c("90"))) %>%
-  filter(!(Duration == "50-300ms")) %>%
+  filter(!(Duration == "Mixed" & Phase == "BBN Rotating")) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
   ggplot(aes(x = Intensity, y = Rxn)) +
   # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
@@ -152,8 +161,8 @@ Rxn_overall_by_Duration %>%
 # 
 # 
 postHoc <- 
-  dunnTest(Rxn ~ interaction(Genotype, Duration, `Dur (ms)`),
-           data = Rxn_overall_by_Duration,
+  FSA::dunnTest(Rxn ~ interaction(Genotype, Duration, `Dur (ms)`),
+           data = Rxn_overall_by_Duration %>% filter(!(Phase == "BBN Rotating")),
            method = "bonf")
 
 # print(postHoc, dunn.test.results = TRUE)
@@ -174,6 +183,7 @@ postHoc$res %>%
 
 Rxn_overall_by_Duration %>%
   filter(!(Intensity %in% c("90"))) %>%
+  filter(!(Phase == "BBN Rotating")) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
   ggplot(aes(x = Intensity, y = Rxn)) +
   # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
