@@ -337,10 +337,15 @@ Rxn_overall_by_Duration <-
             Rxn = mean(`Reaction_(s)`, na.rm = TRUE) * 1000, 
             .groups = "drop") %>%
   rename(Intensity = `Inten (dB)`) %>%
-  mutate(Duration = case_when(Duration == "50ms" ~ "Alone",
+  mutate(Duration = case_when(Duration == "50ms" & Phase == "BBN Rotating" ~ "Rotating",
+                              Duration == "100ms" & Phase == "BBN Rotating" ~ "Rotating",
+                              Duration == "300ms" & Phase == "BBN Rotating" ~ "Rotating",
+                              Duration == "50ms" ~ "Alone",
+                              Duration == "50ms" ~ "Alone",
                               Duration == "100ms" ~ "Alone",
                               Duration == "300ms" ~ "Alone",
-                              Duration == "50-300ms" ~ "Mix"))
+                              Duration == "50-300ms" ~ "Mix",
+                              TRUE ~ as.character(Duration)))
 
 
 
