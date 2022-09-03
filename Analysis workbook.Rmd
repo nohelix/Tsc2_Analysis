@@ -76,18 +76,33 @@ postHoc <-
 # print(postHoc, dunn.test.results = TRUE)
 
 postHoc$res %>% 
-  as_tibble() %>%
-  select(-P.unadj) %>%
-  mutate(Sig = gtools::stars.pval(P.adj),
-         Alone = str_split_fixed(.$Comparison, ' - ', 2)[,1],
-         Mixed = str_split_fixed(.$Comparison, ' - ', 2)[,2]) %>%
-  filter(Alone %in% c("Alone.300", "Alone.100", "Alone.50") & Mixed %in% c("Mix.300", "Mix.100", "Mix.50")) %>%
-  mutate(Alone = str_extract(Alone, "[:digit:]+") %>% as.numeric(),
-         Mixed = str_extract(Mixed, "[:digit:]+") %>% as.numeric(),
-         P.adj = round(P.adj, digits = 3)) %>%
-  filter(Alone == Mixed) %>%
-  select(Alone, Mixed, Z, P.adj, Sig) %>%
-  arrange(Alone)
+    as_tibble() %>%
+    select(-P.unadj) %>%
+    mutate(Sig = gtools::stars.pval(P.adj),
+           Alone = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+           Mixed = str_split_fixed(.$Comparison, ' - ', 2)[,2]) %>%
+    filter(Alone %in% c("Alone.300", "Alone.100", "Alone.50") & Mixed %in% c("Mix.300", "Mix.100", "Mix.50", "Rotating.300", "Rotating.100", "Rotating.50")) %>%
+    mutate(Alone = str_extract(Alone, "[:digit:]+") %>% as.numeric(),
+           Mixed = str_extract(Mixed, "[:digit:]+") %>% as.numeric(),
+           vs = str_extract(Comparison, "- [:alpha:]+") %>% str_remove("- "),
+           P.adj = round(P.adj, digits = 3)) %>%
+    filter(Alone == Mixed) %>%
+    select(Alone, vs, Z, P.adj, Sig) %>%
+    arrange(Alone, vs)
+
+postHoc$res %>% 
+    as_tibble() %>%
+    select(-P.unadj) %>%
+    mutate(Sig = gtools::stars.pval(P.adj),
+           Mixed = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+           Rotating = str_split_fixed(.$Comparison, ' - ', 2)[,2]) %>% 
+    filter(Mixed %in% c("Mix.300", "Mix.100", "Mix.50") & Rotating %in% c("Rotating.300", "Rotating.100", "Rotating.50")) %>%
+    mutate(Mixed = str_extract(Mixed, "[:digit:]+") %>% as.numeric(),
+           Rotating = str_extract(Rotating, "[:digit:]+") %>% as.numeric(),
+           P.adj = round(P.adj, digits = 3)) %>%
+    filter(Mixed == Rotating) %>%
+    select(Mixed, Rotating, Z, P.adj, Sig) %>%
+    arrange(Mixed)
 
 
 Rxn_overall_by_Duration %>%
@@ -127,7 +142,7 @@ kruskal.test(Rxn ~ Genotype,
 
 Rxn_overall_by_Duration %>%
   filter(!(Intensity %in% c("90"))) %>%
-  filter(!(Duration == "Mixed" & Phase == "BBN Rotating")) %>%
+  filter(!(Duration %in% c("Mixed", "Rotating"))) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
   ggplot(aes(x = Intensity, y = Rxn)) +
   # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
@@ -162,7 +177,7 @@ Rxn_overall_by_Duration %>%
 # 
 postHoc <- 
   FSA::dunnTest(Rxn ~ interaction(Genotype, Duration, `Dur (ms)`),
-           data = Rxn_overall_by_Duration %>% filter(!(Phase == "BBN Rotating")),
+           data = Rxn_overall_by_Duration,
            method = "bonf")
 
 # print(postHoc, dunn.test.results = TRUE)
@@ -173,12 +188,33 @@ postHoc$res %>%
     mutate(Sig = gtools::stars.pval(P.adj),
            G1 = str_extract(.$Comparison, '_[:alpha:]+?\\.') %>% str_remove("_") %>% str_remove("\\."),
            G2 = str_extract(.$Comparison, ' - Tsc2_LE_.*?[:punct:]') %>% str_remove(" - Tsc2_LE_") %>% str_remove("\\."),
-           Alone = str_extract(.$Comparison, '\\.[:digit:]+? - ') %>% str_remove("\\.") %>% str_remove(" - "),
-           Mixed = str_extract(.$Comparison, '\\.[:digit:]+?$') %>% str_remove("\\."),
+           Duration_1 = str_extract(.$Comparison, '[:alpha:]+\\.[:digit:]+? - ') %>% str_remove("\\.[:digit:]+ - "),
+           Duration_2 = str_extract(.$Comparison, '[:alpha:]+\\.[:digit:]+?$') %>% str_remove("\\.[:digit:]+"),
+           Dur1 = str_extract(.$Comparison, '\\.[:digit:]+? - ') %>% str_remove("\\.") %>% str_remove(" - ") %>% as.numeric(),
+           Dur2 = str_extract(.$Comparison, '\\.[:digit:]+?$') %>% str_remove("\\.") %>% as.numeric(),
            P.adj = round(P.adj, digits = 3)) %>%
-    filter(G1 == G2 & Mixed == Alone) %>%
-  select(Alone, Mixed, G1, G2, Z, P.adj, Sig) %>%
-  arrange(G1, Alone)
+    filter(G1 == G2 & Dur1 == Dur2) %>%
+    rename(Genotype = G1, Stim_Time = Dur1) %>%
+    select(Genotype, Stim_Time, Duration_1, Duration_2, Z, P.adj, Sig) %>%
+    arrange(Genotype, Stim_Time, Duration_1, Duration_2) %>%
+    filter(Genotype == "Het")
+
+postHoc$res %>% 
+    as_tibble() %>%
+    select(-P.unadj) %>%
+    mutate(Sig = gtools::stars.pval(P.adj),
+           G1 = str_extract(.$Comparison, '_[:alpha:]+?\\.') %>% str_remove("_") %>% str_remove("\\."),
+           G2 = str_extract(.$Comparison, ' - Tsc2_LE_.*?[:punct:]') %>% str_remove(" - Tsc2_LE_") %>% str_remove("\\."),
+           Duration_1 = str_extract(.$Comparison, '[:alpha:]+\\.[:digit:]+? - ') %>% str_remove("\\.[:digit:]+ - "),
+           Duration_2 = str_extract(.$Comparison, '[:alpha:]+\\.[:digit:]+?$') %>% str_remove("\\.[:digit:]+"),
+           Dur1 = str_extract(.$Comparison, '\\.[:digit:]+? - ') %>% str_remove("\\.") %>% str_remove(" - ") %>% as.numeric(),
+           Dur2 = str_extract(.$Comparison, '\\.[:digit:]+?$') %>% str_remove("\\.") %>% as.numeric(),
+           P.adj = round(P.adj, digits = 3)) %>%
+    filter(G1 == G2 & Dur1 == Dur2) %>%
+    rename(Genotype = G1, Stim_Time = Dur1) %>%
+    select(Genotype, Stim_Time, Duration_1, Duration_2, Z, P.adj, Sig) %>%
+    arrange(Genotype, Stim_Time, Duration_1, Duration_2) %>%
+    filter(Genotype == "WT")
 
 
 Rxn_overall_by_Duration %>%
