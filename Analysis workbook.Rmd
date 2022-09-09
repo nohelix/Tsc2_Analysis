@@ -138,11 +138,33 @@ Rxn_overall_by_Duration %>%
 ```{r Genotype Effect, fig.height = 9.5, fig.width = 8}
 kruskal.test(Rxn ~ Genotype, 
              data = Rxn_overall_by_Duration %>% 
-                    filter(!(Duration == "Mixed" & Phase == "BBN Rotating")))
+                    filter(Duration == "Alone"))
+
+postHoc <- 
+  FSA::dunnTest(Rxn ~ interaction(Genotype, Duration, `Dur (ms)`),
+           data = Rxn_overall_by_Duration,
+           method = "bonf")
+
+postHoc$res %>% 
+    as_tibble() %>%
+    select(-P.unadj) %>%
+    mutate(Sig = gtools::stars.pval(P.adj),
+           G1 = str_extract(.$Comparison, '_[:alpha:]+?\\.') %>% str_remove("_") %>% str_remove("\\."),
+           G2 = str_extract(.$Comparison, ' - Tsc2_LE_.*?[:punct:]') %>% str_remove(" - Tsc2_LE_") %>% str_remove("\\."),
+           Duration_1 = str_extract(.$Comparison, '[:alpha:]+\\.[:digit:]+? - ') %>% str_remove("\\.[:digit:]+ - "),
+           Duration_2 = str_extract(.$Comparison, '[:alpha:]+\\.[:digit:]+?$') %>% str_remove("\\.[:digit:]+"),
+           Dur1 = str_extract(.$Comparison, '\\.[:digit:]+? - ') %>% str_remove("\\.") %>% str_remove(" - ") %>% as.numeric(),
+           Dur2 = str_extract(.$Comparison, '\\.[:digit:]+?$') %>% str_remove("\\.") %>% as.numeric(),
+           P.adj = round(P.adj, digits = 3)) %>%
+    filter(Dur1 == Dur2, Duration_1 == Duration_2) %>%
+    rename(Stim_Time = Dur1) %>%
+    select(G1, G2, Stim_Time, Duration_1, Duration_2, Z, P.adj, Sig) %>%
+    arrange(Stim_Time, Duration_1, Duration_2) %>%
+    filter(Duration_1 == "Alone")
 
 Rxn_overall_by_Duration %>%
   filter(!(Intensity %in% c("90"))) %>%
-  filter(!(Duration %in% c("Mixed", "Rotating"))) %>%
+  filter(Duration == "Alone") %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
   ggplot(aes(x = Intensity, y = Rxn)) +
   # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
@@ -177,7 +199,8 @@ Rxn_overall_by_Duration %>%
 # 
 postHoc <- 
   FSA::dunnTest(Rxn ~ interaction(Genotype, Duration, `Dur (ms)`),
-           data = Rxn_overall_by_Duration,
+           data = Rxn_overall_by_Duration %>%
+                    mutate(Duration = gsub("Rotating", "Mix", Duration)),
            method = "bonf")
 
 # print(postHoc, dunn.test.results = TRUE)
@@ -219,7 +242,8 @@ postHoc$res %>%
 
 Rxn_overall_by_Duration %>%
   filter(!(Intensity %in% c("90"))) %>%
-  filter(!(Phase == "BBN Rotating")) %>%
+  # filter(!(Phase == "BBN Rotating")) %>%
+  mutate(Duration = gsub("Rotating", "Mix", Duration)) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
   ggplot(aes(x = Intensity, y = Rxn)) +
   # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
