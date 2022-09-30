@@ -48,7 +48,8 @@ TH_view %>%
 Modeling Type:
 
 ```{r Normality, echo=FALSE}
-Rxn.aov = aov(LambertW::Gaussianize(Rxn_overall_by_Duration$Rxn) ~ Intensity * Genotype * Duration * `Dur (ms)`, data = Rxn_overall_by_Duration)
+Rxn.aov = aov(LambertW::Gaussianize(Rxn_overall_by_Duration$Rxn) ~ Intensity * Genotype * Duration * `Dur (ms)`, 
+              data = Rxn_overall_by_Duration)
 
 is_parametric = shapiro.test(Rxn.aov$residuals)$p.value > 0.05
 
@@ -64,7 +65,7 @@ summary(Rxn.aov)
 # Post Hoc Testing
 ### Single vs. Mixed Duration
 ```{r Duration Effect, fig.height = 9.5, fig.width = 8}
-kruskal.test(Rxn ~ Genotype, 
+kruskal.test(Rxn ~ `Dur (ms)`, 
              data = Rxn_overall_by_Duration %>% 
                     filter(Duration == "Alone"))
 

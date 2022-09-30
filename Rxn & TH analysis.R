@@ -215,15 +215,15 @@ writeLines("Calculating Thresholds")
 # Calculate d' and save (along with hit/miss/CR/FA table)
 TH_data <-
   df %>%
-  group_by(ID, Genotype, Duration, `Dur (ms)`, Type, `Inten (dB)`, Response) %>% 
+  group_by(ID, Genotype, Phase, Duration, `Dur (ms)`, Type, `Inten (dB)`, Response) %>% 
   summarise(count = n(), .groups = "keep") %>% 
   spread(Response, count) %>% #View
-  group_by(ID, Genotype, Duration) %>% #print
+  group_by(ID, Genotype, Phase, Duration) %>% #print
   nest() %>%
   mutate(dprime_data = map(data, dprime_table)) %>% 
   select(-data) %>% 
   unnest(cols = c(dprime_data)) %>%
-  group_by(ID, Genotype, Duration, `Dur (ms)`) %>% #print
+  group_by(ID, Genotype, Phase, Duration, `Dur (ms)`) %>% #print
   nest() %>%
   mutate(dprime = map(data, dprime_calc)) %>% #print
   unnest(dprime) #%>% print
@@ -246,6 +246,7 @@ TH_calc <- function(df) {
 
 TH <-
   TH_data %>%
+  filter(Phase %in% c("BBN TH", "BBN Rxn")) %>%
   # filter(Duration == "50-300ms") %>%
   # filter(ID == "RP 6") %>%
   select(ID:`Dur (ms)`, dprime, dB) %>% #print
@@ -267,8 +268,10 @@ TH_view <-
 
 
 # Reaction time from summary sheet ----------------------------------------
+
 Rxn <-
   Tsc_Data %>%
+  filter(Phase %in% c("BBN TH", "BBN Rxn", "BBN Rotating")) %>%
   filter(Duration != "50-300ms") %>%
   gather(key = "Intensity", value = "Rxn", 8:16) %>%
   group_by(ID, Genotype, Duration, Intensity) %>%
@@ -317,6 +320,7 @@ Rxn_overall <-
   unnest(data) %>% 
   filter(Type == 1 & Response == "Hit") %>%
   filter(`Inten (dB)` != -100) %>% 
+  filter(Phase %in% c("BBN TH", "BBN Rxn", "BBN Rotating")) %>%
   # Filter by TH table so that only reaction times above thresholds are included
   group_by(ID, Genotype, `Dur (ms)`, `Inten (dB)`, Phase) %>%
   summarise(count = n_distinct(Date),
@@ -331,6 +335,7 @@ Rxn_overall_by_Duration <-
   unnest(data) %>% 
   filter(Type == 1 & Response == "Hit") %>%
   filter(`Inten (dB)` != -100) %>% 
+  filter(Phase %in% c("BBN TH", "BBN Rxn", "BBN Rotating")) %>%
   # Filter by TH table so that only reaction times above thresholds are included
   group_by(ID, Genotype, Duration, `Dur (ms)`, `Inten (dB)`, Phase) %>%
   summarise(count = n_distinct(Date),
