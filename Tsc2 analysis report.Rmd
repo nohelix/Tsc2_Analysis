@@ -176,6 +176,8 @@ Rxn_overall_by_Duration %>%
                fun = mean,
                geom = "point", position = position_dodge(0.1), size = 3) +
   stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
+  scale_color_manual(labels = c("WT" = "Wildtype", "Het" = bquote("Tsc2"^"+/-")),
+                   values = c("WT" = "black", "Het" = "deepskyblue")) +
   labs(title = "Tsc2 Eker",
        caption = paste("Date:", head(sort(df$Date, decreasing = TRUE))),
        x = "Intensity (dB)",
@@ -185,7 +187,9 @@ Rxn_overall_by_Duration %>%
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
-    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    legend.position = c(0.87, 0.2),
+    legend.key = element_blank()
   )
 ```
 
@@ -255,6 +259,8 @@ Rxn_overall_by_Duration %>%
                fun = mean,
                geom = "point", position = position_dodge(0.1), size = 3) +
   stat_summary(aes(color = Genotype, linetype = Duration, group = interaction(Genotype, Duration)), fun = mean, geom = "line") +
+  scale_color_manual(labels = c("WT" = "Wildtype", "Het" = bquote("Tsc2"^"+/-")),
+                 values = c("WT" = "black", "Het" = "deepskyblue")) +
   labs(title = "Tsc2 Eker",
        caption = paste("Data trough:", head(sort(df$Date, decreasing = TRUE))),
        x = "Intensity (dB)",
