@@ -12,6 +12,8 @@ editor_options:
 ---
 ```{r Data import & prep, include=FALSE}
 source("~/GitHub/Tsc2_Analysis/Rxn & TH analysis.R")
+
+partial.data = c("GP 6", "TP 5", "TP 3", "GP 5", "TP 4", "TP 1")
 ```
 
 # Stats
@@ -137,11 +139,12 @@ Rxn_overall_by_Duration %>%
 ```{r Genotype Effect, fig.height = 9.5, fig.width = 8}
 kruskal.test(Rxn ~ Genotype, 
              data = Rxn_overall_by_Duration %>% 
-                    filter(Duration == "Alone"))
+                    filter(Duration == "Alone") %>%
+                    filter(!(ID %in% partial.data)))
 
 postHoc <- 
   FSA::dunnTest(Rxn ~ interaction(Genotype, Duration, `Dur (ms)`),
-           data = Rxn_overall_by_Duration,
+           data = Rxn_overall_by_Duration %>% filter(!(ID %in% partial.data)),
            method = "bonf")
 
 postHoc$res %>% 
@@ -164,6 +167,7 @@ postHoc$res %>%
 Rxn_overall_by_Duration %>%
   filter(!(Intensity %in% c("90"))) %>%
   filter(Duration == "Alone") %>%
+  filter(!(ID %in% partial.data)) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
   ggplot(aes(x = Intensity, y = Rxn)) +
   # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
@@ -203,6 +207,7 @@ Rxn_overall_by_Duration %>%
 postHoc <- 
   FSA::dunnTest(Rxn ~ interaction(Genotype, Duration, `Dur (ms)`),
            data = Rxn_overall_by_Duration %>%
+                    filter(!(ID %in% partial.data)) %>%
                     mutate(Duration = gsub("Rotating", "Mix", Duration)),
            method = "bonf")
 
@@ -245,6 +250,7 @@ postHoc$res %>%
 
 Rxn_overall_by_Duration %>%
   filter(!(Intensity %in% c("90"))) %>%
+  filter(!(ID %in% partial.data)) %>%
   # filter(!(Phase == "BBN Rotating")) %>%
   mutate(Duration = gsub("Rotating", "Mix", Duration)) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
