@@ -13,7 +13,7 @@ editor_options:
 ```{r Data import & prep, include=FALSE}
 source("~/GitHub/Tsc2_Analysis/Rxn & TH analysis.R")
 
-partial.data = c("GP 6", "TP 5", "TP 3", "GP 5", "TP 4", "TP 1")
+partial.data = c("GP 4", "TP 2", "RP 4", "GP 6", "TP 5", "TP 3", "GP 5", "TP 4", "TP 1")
 ```
 
 # Stats
@@ -50,8 +50,11 @@ TH_view %>%
 Modeling Type:
 
 ```{r Normality, echo=FALSE}
-Rxn.aov = aov(LambertW::Gaussianize(Rxn_overall_by_Duration$Rxn) ~ Intensity * Genotype * Duration * `Dur (ms)`, 
-              data = Rxn_overall_by_Duration)
+Rxn.aov = aov(LambertW::Gaussianize(Rxn_overall_by_Duration %>%
+                    filter(!(ID %in% partial.data)) %>%
+                      .$Rxn) ~ Intensity * Genotype * Duration * `Dur (ms)`, 
+              data = Rxn_overall_by_Duration %>%
+                     filter(!(ID %in% partial.data)))
 
 is_parametric = shapiro.test(Rxn.aov$residuals)$p.value > 0.05
 
@@ -67,6 +70,9 @@ summary(Rxn.aov)
 # Post Hoc Testing
 ### Single vs. Mixed Duration
 ```{r Duration Effect, fig.height = 9.5, fig.width = 8}
+Rotation.before = c("GP 1", "GP 2", "GP 3", "TP 2")
+Rotation.after = c("RP 3", "RP 5", "RP 6")
+
 kruskal.test(Rxn ~ `Dur (ms)`, 
              data = Rxn_overall_by_Duration %>% 
                     filter(Duration == "Alone"))
@@ -108,6 +114,7 @@ postHoc$res %>%
 
 Rxn_overall_by_Duration %>%
   filter(!(Intensity %in% c("90"))) %>%
+  # filter(ID %in% Rotation.after) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
   ggplot(aes(x = Intensity, y = Rxn)) +
   # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
