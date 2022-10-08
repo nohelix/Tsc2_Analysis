@@ -254,6 +254,22 @@ postHoc$res %>%
     arrange(Genotype, Stim_Time, Duration_1, Duration_2) %>%
     filter(Genotype == "WT")
 
+postHoc$res %>% 
+    as_tibble() %>%
+    select(-P.unadj) %>%
+    mutate(Sig = gtools::stars.pval(P.adj),
+           G1 = str_extract(.$Comparison, '_[:alpha:]+?\\.') %>% str_remove("_") %>% str_remove("\\."),
+           G2 = str_extract(.$Comparison, ' - Tsc2_LE_.*?[:punct:]') %>% str_remove(" - Tsc2_LE_") %>% str_remove("\\."),
+           Duration_1 = str_extract(.$Comparison, '[:alpha:]+\\.[:digit:]+? - ') %>% str_remove("\\.[:digit:]+ - "),
+           Duration_2 = str_extract(.$Comparison, '[:alpha:]+\\.[:digit:]+?$') %>% str_remove("\\.[:digit:]+"),
+           Dur1 = str_extract(.$Comparison, '\\.[:digit:]+? - ') %>% str_remove("\\.") %>% str_remove(" - ") %>% as.numeric(),
+           Dur2 = str_extract(.$Comparison, '\\.[:digit:]+?$') %>% str_remove("\\.") %>% as.numeric(),
+           P.adj = round(P.adj, digits = 3)) %>%
+    filter(G1 != G2 & Dur1 == Dur2, Duration_1 == Duration_2) %>%
+    rename(Stim_Time = Dur1, Rotating = Duration_1) %>%
+    select(G1, G2, Stim_Time, Rotating, Z, P.adj, Sig) %>%
+    arrange(G1, G2, Stim_Time, Rotating)
+
 
 Rxn_overall_by_Duration %>%
   filter(!(Intensity %in% c("90"))) %>%
