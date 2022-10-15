@@ -13,7 +13,7 @@ editor_options:
 ```{r Data import & prep, include=FALSE}
 source("~/GitHub/Tsc2_Analysis/Rxn & TH analysis.R")
 
-partial.data = c("GP 4", "TP 2", "RP 4", "GP 6", "TP 5", "TP 3", "GP 5", "TP 4", "TP 1")
+partial.data = c("TP 1", "TP 3", "TP 5", "RP 4", "GP 5", "GP 6")
 ```
 
 # Stats
