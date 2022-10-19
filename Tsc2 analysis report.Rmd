@@ -177,8 +177,6 @@ Rxn_overall_by_Duration %>%
   filter(!(ID %in% partial.data)) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
   ggplot(aes(x = Intensity, y = Rxn)) +
-  # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
-  # geom_line(aes(group = ID, color = Genotype), alpha = 0.3)+
   stat_summary(aes(color = Genotype, group = Genotype),
                fun = mean,
                fun.min = function(x) mean(x) - se(x),
@@ -190,7 +188,38 @@ Rxn_overall_by_Duration %>%
   stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
   scale_color_manual(labels = c("WT" = "Wildtype", "Het" = bquote("Tsc2"^"+/-")),
                    values = c("WT" = "black", "Het" = "deepskyblue")) +
-  labs(title = "Tsc2 Eker",
+  labs(title = "Tsc2 Eker (Single duration)",
+       caption = paste("Date:", head(sort(df$Date, decreasing = TRUE))),
+       x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)") +
+  scale_x_continuous(breaks = seq(20, 80, by = 10)) +
+  facet_wrap( ~ `Dur (ms)`, ncol = 1) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    legend.position = c(0.87, 0.2),
+    legend.key = element_blank()
+  )
+
+Rxn_overall_by_Duration %>%
+  filter(!(Intensity %in% c("90"))) %>%
+  filter(Duration == "Mix") %>%
+  filter(!(ID %in% partial.data)) %>%
+  mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
+  ggplot(aes(x = Intensity, y = Rxn)) +
+  stat_summary(aes(color = Genotype, group = Genotype),
+               fun = mean,
+               fun.min = function(x) mean(x) - se(x),
+               fun.max = function(x) mean(x) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(0.1)) +
+  stat_summary(aes(color = Genotype, group = Genotype),
+               fun = mean,
+               geom = "point", position = position_dodge(0.1), size = 3) +
+  stat_summary(aes(color = Genotype, group = Genotype), fun = mean, geom = "line") +
+  scale_color_manual(labels = c("WT" = "Wildtype", "Het" = bquote("Tsc2"^"+/-")),
+                     values = c("WT" = "black", "Het" = "deepskyblue")) +
+  labs(title = "Tsc2 Eker (Mix duration)",
        caption = paste("Date:", head(sort(df$Date, decreasing = TRUE))),
        x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)") +
