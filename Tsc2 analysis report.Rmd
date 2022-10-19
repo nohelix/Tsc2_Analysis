@@ -37,10 +37,10 @@ TH_view %>%
             `50ms` = mean(na.omit(`50`)) %>% round(digits = 1), 
             `100ms` = mean(na.omit(`100`)) %>% round(digits = 1), 
             `300ms` = mean(na.omit(`300`)) %>% round(digits = 1))
-
-TH_view %>%
-  group_by(ID) %>%
-  filter(n() > 1)
+# 
+# TH_view %>%
+#   group_by(ID) %>%
+#   filter(n() > 1)
 
   
 ```
