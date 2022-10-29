@@ -335,6 +335,6 @@ Rxn_overall_by_Duration %>%
 ```
 
 ```{r}
-save(df, loaded_files, Data_over_TH, Rxn, Rxn_overall_by_Duration, file = "Tsc2_analysis.Rdata")
+save(df, Master_summary, loaded_files, Data_over_TH, Rxn, Rxn_overall_by_Duration, file = "Tsc2_analysis.Rdata")
 ```
 
