@@ -308,7 +308,7 @@ Data_over_TH <-
   filter(Type == 1 & Response == "Hit") %>%
   filter(`Inten (dB)` != -100) %>%
   mutate(Rat = .$ID, Dur = .$`Dur (ms)`) %>%
-  group_by(Rat, Genotype, Dur, `Freq (kHz)`, Duration, Phase) %>%
+  group_by(Rat, Genotype, Dur, Duration, Phase) %>%
   nest %>%
   mutate(data = map(data, TH_filter)) #%>% print
 
