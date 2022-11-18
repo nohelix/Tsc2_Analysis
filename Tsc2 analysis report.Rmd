@@ -6,14 +6,15 @@ output:
     toc: yes
   html_document:
     toc: yes
-    df_print: paged
 editor_options:
   chunk_output_type: inline
 ---
 ```{r Data import & prep, include=FALSE}
-source("~/GitHub/Tsc2_Analysis/Rxn & TH analysis.R")
+github = "Z:/"
+setwd(github)
+source(paste0(github, "GitHub/Tsc2_Analysis/Rxn & TH analysis.R"))
 
-partial.data = c("TP 3", "GP 5", "GP 6")
+partial.data = c()
 ```
 
 # Stats
@@ -29,6 +30,7 @@ TH.aov = aov(TH ~ Genotype * Duration * `Dur (ms)` + Error(ID), data = TH)
 summary(TH.aov)
 
 TH_view %>%
+  filter(`Freq (kHz)` == 0) %>%
   filter(Duration == "Alone") %>%
   ungroup %>%
   select(-Duration) %>%
@@ -51,10 +53,10 @@ Modeling Type:
 
 ```{r Normality, echo=FALSE}
 Rxn.aov = aov(LambertW::Gaussianize(Rxn_overall_by_Duration %>%
-                    filter(!(ID %in% partial.data)) %>%
+                    filter(!(ID %in% partial.data) & Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)) %>%
                       .$Rxn) ~ Intensity * Genotype * Duration * `Dur (ms)`, 
               data = Rxn_overall_by_Duration %>%
-                     filter(!(ID %in% partial.data)))
+                     filter(!(ID %in% partial.data) & Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)))
 
 is_parametric = shapiro.test(Rxn.aov$residuals)$p.value > 0.05
 
@@ -75,11 +77,11 @@ Rotation.after = c("RP 3", "RP 5", "RP 6")
 
 kruskal.test(Rxn ~ `Dur (ms)`, 
              data = Rxn_overall_by_Duration %>% 
-                    filter(Duration == "Alone"))
+                    filter(Duration == "Alone" & Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)))
 
 postHoc <- 
   FSA::dunnTest(Rxn ~ interaction(Duration, `Dur (ms)`),
-           data = Rxn_overall_by_Duration,
+           data = Rxn_overall_by_Duration %>% filter(Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)),
            method = "bonf")
 
 postHoc$res %>% 
@@ -113,7 +115,7 @@ postHoc$res %>%
 
 
 Rxn_overall_by_Duration %>%
-  filter(!(Intensity %in% c("90"))) %>%
+  filter(Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)) %>%
   # filter(ID %in% Rotation.after) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
   ggplot(aes(x = Intensity, y = Rxn)) +
@@ -147,11 +149,11 @@ Rxn_overall_by_Duration %>%
 kruskal.test(Rxn ~ Genotype, 
              data = Rxn_overall_by_Duration %>% 
                     filter(Duration == "Alone") %>%
-                    filter(!(ID %in% partial.data)))
+                    filter(!(ID %in% partial.data) & Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)))
 
 postHoc <- 
   FSA::dunnTest(Rxn ~ interaction(Genotype, Duration, `Dur (ms)`),
-           data = Rxn_overall_by_Duration %>% filter(!(ID %in% partial.data)),
+           data = Rxn_overall_by_Duration %>% filter(!(ID %in% partial.data) & Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)),
            method = "bonf")
 
 postHoc$res %>% 
@@ -172,7 +174,7 @@ postHoc$res %>%
     filter(Duration_1 == "Alone")
 
 Rxn_overall_by_Duration %>%
-  filter(!(Intensity %in% c("90"))) %>%
+  filter(Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)) %>%
   filter(Duration == "Alone") %>%
   filter(!(ID %in% partial.data)) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
@@ -203,7 +205,7 @@ Rxn_overall_by_Duration %>%
   )
 
 Rxn_overall_by_Duration %>%
-  filter(!(Intensity %in% c("90"))) %>%
+  filter(Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)) %>%
   filter(Duration == "Mix") %>%
   filter(!(ID %in% partial.data)) %>%
   mutate(Genotype = str_extract(Genotype, "Het|WT")) %>%
@@ -243,7 +245,7 @@ Rxn_overall_by_Duration %>%
 postHoc <- 
   FSA::dunnTest(Rxn ~ interaction(Genotype, Duration, `Dur (ms)`),
            data = Rxn_overall_by_Duration %>%
-                    filter(!(ID %in% partial.data)) %>%
+                    filter(!(ID %in% partial.data) & Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)) %>%
                     mutate(Duration = gsub("Rotating", "Mix", Duration)),
            method = "bonf")
 
@@ -301,7 +303,7 @@ postHoc$res %>%
 
 
 Rxn_overall_by_Duration %>%
-  filter(!(Intensity %in% c("90"))) %>%
+  filter(Intensity %in% c(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80)) %>%
   filter(!(ID %in% partial.data)) %>%
   # filter(!(Phase == "BBN Rotating")) %>%
   mutate(Duration = gsub("Rotating", "Mix", Duration)) %>%
