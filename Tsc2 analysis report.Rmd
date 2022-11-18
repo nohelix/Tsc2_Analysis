@@ -26,7 +26,7 @@ writeLines(paste("Analysis run on", Sys.Date(), "
 
 # Thresholds
 ```{r}
-TH.aov = aov(TH ~ Genotype * Duration * `Dur (ms)` + Error(ID), data = TH)
+TH.aov = aov(TH ~ Genotype * Duration * `Dur (ms)` + Error(ID), data = TH %>% filter(!(ID %in% partial.data) & `Freq (kHz)` == 0))
 summary(TH.aov)
 
 TH_view %>%
