@@ -459,3 +459,68 @@ Rxn_overall_by_Duration %>%
     # legend.position = c(0.87, 0.2),
     legend.key = element_blank()
   )
+
+# Duration Effect ---------------------------------------------------------
+
+Rxn_overall_by_Duration %>%
+  filter(Intensity %in% c(125, 30, 35, 40, 45, 50, 60, 70, 80)) %>%
+  filter(!(ID %in% partial.data)) %>%
+  mutate(Genotype = str_extract(Genotype, "Het|WT"),
+         `Dur (ms)` = as.factor(`Dur (ms)`)) %>%
+  filter(Genotype == "WT" & Duration == "Alone") %>%
+  ggplot(aes(x = Intensity, y = Rxn)) +
+  # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
+  # geom_line(aes(group = ID, color = Genotype), alpha = 0.3)+
+  stat_summary(aes(color = `Dur (ms)`, group = `Dur (ms)`),
+               fun = mean,
+               fun.min = function(x) mean(x) - se(x),
+               fun.max = function(x) mean(x) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(0.1)) +
+  stat_summary(aes(shape = `Dur (ms)`, color = `Dur (ms)`, group = `Dur (ms)`),
+               fun = mean,
+               geom = "point", position = position_dodge(0.1), size = 3) +
+  stat_summary(aes(color = `Dur (ms)`, group = `Dur (ms)`), fun = mean, geom = "line") +
+  labs(title = "Tsc2-LE WT effect of Duration on Alone",
+       caption = paste("Date:", head(sort(df$Date, decreasing = TRUE))),
+       x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)") +
+  scale_x_continuous(breaks = seq(20, 80, by = 10)) +
+  scale_y_continuous(limits=c(100, 450)) +
+  # facet_wrap(~ `Dur (ms)` , ncol = 1) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+Rxn_overall_by_Duration %>%
+  filter(Intensity %in% c(25, 30, 35, 40, 45, 50, 60, 70, 80)) %>%
+  filter(!(ID %in% partial.data)) %>%
+  mutate(Genotype = str_extract(Genotype, "Het|WT"),
+         `Dur (ms)` = as.factor(`Dur (ms)`)) %>%
+  filter(Genotype == "Het" & Duration == "Alone") %>%
+  ggplot(aes(x = Intensity, y = Rxn)) +
+  # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
+  # geom_line(aes(group = ID, color = Genotype), alpha = 0.3)+
+  stat_summary(aes(color = `Dur (ms)`, group = `Dur (ms)`),
+               fun = mean,
+               fun.min = function(x) mean(x) - se(x),
+               fun.max = function(x) mean(x) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(0.1)) +
+  stat_summary(aes(shape = `Dur (ms)`, color = `Dur (ms)`, group = `Dur (ms)`),
+               fun = mean,
+               geom = "point", position = position_dodge(0.1), size = 3) +
+  stat_summary(aes(color = `Dur (ms)`, group = `Dur (ms)`), fun = mean, geom = "line") +
+  labs(title = "Tsc2-LE KO effect of Duration on Alone",
+       caption = paste("Date:", head(sort(df$Date, decreasing = TRUE))),
+       x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)") +
+  scale_x_continuous(breaks = seq(20, 80, by = 10)) +
+  scale_y_continuous(limits=c(100, 450)) +
+  # facet_wrap(~ `Dur (ms)` , ncol = 1) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
